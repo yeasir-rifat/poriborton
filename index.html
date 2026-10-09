@@ -3250,7 +3250,7 @@
         <div class="adm-panel-head"><h3>সদস্য তালিকা</h3></div>
         <div class="adm-panel-body">
           <table>
-            <thead><tr><th>নাম</th><th>অনুষদ</th><th>ব্যাচ</th><th>ভূমিকা</th></tr></thead>
+            <thead><tr><th>নাম</th><th>ইমেইল</th><th>অনুষদ</th><th>ব্যাচ</th><th>ভূমিকা</th><th>অ্যাকশন</th></tr></thead>
             <tbody>
               <tr data-row>
                 <td class="adm-cell-title">রিফাত আহমেদ</td>
@@ -3447,18 +3447,18 @@
         <div class="adm-panel-body" style="padding:22px;">
           <div class="adm-field">
             <label>মূল শিরোনাম</label>
-            <input type="text" value="লেখালেখি, পাঠচক্র ও সৃজনশীলতার একটি প্রাণবন্ত কমিউনিটি">
+            <input type="text" id="heroTitle" value="" placeholder="রঙিন করতে শব্দটি *তারা* চিহ্নের মাঝে লিখুন">
           </div>
           <div class="adm-field">
             <label>বর্ণনা টেক্সট</label>
-            <textarea>এটি প্লেসহোল্ডার টেক্সট। এখানে ক্লাবের মূল বার্তা থাকবে, লেখালেখি, পাঠচক্র ও সৃজনশীলতার একটি প্রাণবন্ত কমিউনিটি হিসেবে "পরিবর্তন"-এর পরিচয় তুলে ধরা হবে।</textarea>
+            <textarea id="heroDesc"></textarea>
           </div>
           <div class="adm-field-row">
             <div class="adm-field"><label>সক্রিয় সদস্য সংখ্যা</label><input type="text" id="heroMembers" value="৩৫০+"></div>
             <div class="adm-field"><label>প্রকাশিত সংখ্যা</label><input type="text" id="heroIssues" value="৪২"></div>
           </div>
           <div class="adm-field"><label>বছরের যাত্রা</label><input type="text" id="heroYears" value="৭"></div>
-          <p style="font-size:0.8rem; color:var(--ink-soft); margin:-4px 0 14px;">মূল শিরোনাম ও বর্ণনা টেক্সট এখনো সাইটের সাথে যুক্ত নয়, তাই এখান থেকে সংরক্ষণ হবে না।</p>
+          
           <button class="adm-btn adm-btn-primary"><i data-lucide="save" width="17" height="17"></i> পরিবর্তন সংরক্ষণ করুন</button>
         </div>
       </div>
@@ -3500,7 +3500,7 @@
         <div class="adm-panel-head"><h3>সাইট সেটিংস</h3></div>
         <div class="adm-panel-body" style="padding:22px;">
           <div class="adm-field-row">
-            <div class="adm-field"><label>সাইটের নাম</label><input type="text" value="পরিবর্তন, বাংলা সাহিত্য ক্লাব"></div>
+            <div class="adm-field"><label>সাইটের নাম</label><input type="text" id="setSiteName" value=""></div>
             <div class="adm-field"><label>যোগাযোগ ইমেইল</label><input type="email" id="setEmail" value="contact@poriborton.club"></div>
           </div>
           <div class="adm-field-row">
@@ -3636,7 +3636,7 @@
     viewTitleEl.textContent = meta[0];
     viewCrumbEl.textContent = meta[1];
     topAddLabel.textContent = meta[2];
-    topAddBtn.style.display = (name === 'settings' || name === 'submissions' || name === 'submission-review') ? 'none' : '';
+    topAddBtn.style.display = (name === 'settings' || name === 'submissions' || name === 'submission-review' || name === 'members') ? 'none' : '';
     closeSidebarOnMobile();
     window.scrollTo({top:0, behavior:'smooth'});
     // database থেকে তালিকা তাজা করা
@@ -3644,6 +3644,7 @@
     if (name === 'events') loadEvents();
     if (name === 'magazine') loadMagazine();
     if (name === 'gallery') loadGallery();
+    if (name === 'dashboard') loadDashboardCounts();
     if (name === 'members') loadMembers();
     if (name === 'submissions') loadSubmissions();
     if (name === 'homepage') loadHomepage();
@@ -3764,13 +3765,14 @@
       <div class="adm-field"><label>ছবি (নতুন ছবি দিলে পুরনোটি বদলাবে)</label><label class="adm-upload-box" data-upload-box><i data-lucide="upload-cloud" width="24" height="24"></i><div data-upload-label>ছবি টেনে আনুন অথবা ক্লিক করে বেছে নিন</div><input type="file" accept=".jpg,.jpeg,.png,.webp" hidden></label></div>
       <div class="adm-field"><label>ক্যাপশন</label><input type="text" data-f="caption" value="${escAttr(data.caption)}" placeholder="ছবির সংক্ষিপ্ত বিবরণ"></div>`,
     members: (data) => `
-      <div class="adm-field"><label>পূর্ণ নাম</label><input type="text" value="${data.name||''}"></div>
-      <div class="adm-field-row">
-        <div class="adm-field"><label>ইমেইল</label><input type="email" value="${data.email||''}"></div>
-        <div class="adm-field"><label>ব্যাচ</label><input type="text" placeholder="যেমনঃ ১৩"></div>
-      </div>
-      <div class="adm-field"><label>অনুষদ</label><select><option>কৃষি অনুষদ</option><option>কৃষি অর্থনীতি অনুষদ</option><option>কৃষি প্রকৌশল ও প্রযুক্তি অনুষদ</option><option>ভেটেরিনারি ও এনিম্যাল সায়েন্স অনুষদ</option></select></div>
-      <div class="adm-field"><label>ভূমিকা</label><select><option>সদস্য</option><option>সম্পাদক</option><option>সুপার এডমিন</option></select></div>`,
+      <div class="adm-field"><label>পূর্ণ নাম</label><input type="text" value="${escAttr(data.name)}" disabled></div>
+      <div class="adm-field"><label>ইমেইল</label><input type="email" value="${escAttr(data.email)}" disabled></div>
+      <div class="adm-field"><label>ভূমিকা</label>
+        <select data-f="role">
+          <option value="member"${data.role !== 'editor' && data.role !== 'admin' ? ' selected' : ''}>সদস্য</option>
+          <option value="editor"${data.role === 'editor' ? ' selected' : ''}>সম্পাদক</option>
+          <option value="admin"${data.role === 'admin' ? ' selected' : ''}>এডমিন</option>
+        </select></div>`,
     homepage: (data) => `
       <div class="adm-field"><label>ক্রম নম্বর</label><input type="number" min="0" data-f="num" value="${data.num ?? ''}" placeholder="১"></div>
       <div class="adm-field"><label>শিরোনাম</label><input type="text" data-f="title" value="${escAttr(data.title)}"></div>
@@ -3826,7 +3828,7 @@
   topAddBtn.addEventListener('click', () => { editingRow = null; openEditModal('add'); });
 
   // ---------- Supabase data layer: লেখা (articles) ও অনুষ্ঠান (events) ----------
-  const admRows = { articles: new Map(), events: new Map(), magazine: new Map(), gallery: new Map(), values: new Map() };
+  const admRows = { articles: new Map(), events: new Map(), magazine: new Map(), gallery: new Map(), values: new Map(), members: new Map(), submissions: new Map(), authorOrig: new Map() };
   let admAboutTitle = '';
   const dbOk = () => !!window.sb;
   // ভিউ -> টেবিল ও লোড ফাংশন (ডিলিট ও রিফ্রেশে ব্যবহৃত)
@@ -3867,7 +3869,7 @@
     return '<tr data-row data-id="' + escAttr(r.id) + '">' +
       '<td class="adm-cell-title">' + escAttr(r.title) + '</td>' +
       '<td>' + escAttr(fmtBnDate(d)) + '</td>' +
-      '<td>' + escAttr(fmtBnTime(t) || 'নির্ধারিত নয়') + '</td>' +
+      '<td>' + escAttr(fmtBnTime(t) || 'নির্ধারিত নয়') + (r.ends_at ? ' থেকে ' + escAttr(fmtBnTime(dhakaTime(r.ends_at))) : '') + '</td>' +
       '<td>' + escAttr(r.location || 'নির্ধারিত নয়') + '</td>' +
       '<td><span class="adm-status-dot' + (upcoming ? ' adm-pending' : ' adm-off') + '">' + (upcoming ? 'আসন্ন' : 'সম্পন্ন') + '</span></td>' +
       '<td class="adm-row-actions">' +
@@ -3898,7 +3900,7 @@
     if (!dbOk()) return;
     const tbody = document.querySelector('[data-view-panel="events"] tbody');
     const { data, error } = await window.sb.from('events')
-      .select('id,title,description,starts_at,location,published')
+      .select('id,title,description,starts_at,ends_at,location,published')
       .order('starts_at', { ascending: false, nullsFirst: false });
     if (error){ showToast('অনুষ্ঠান লোড করা যায়নি: ' + error.message); return; }
     admRows.events.clear();
@@ -3944,6 +3946,7 @@
     const payload = {
       title,
       starts_at: date + 'T' + (time || '00:00') + ':00' + DHAKA_OFFSET,
+      ends_at: end ? date + 'T' + end + ':00' + DHAKA_OFFSET : null,
       location: place || null,
       description: desc || null,
       published: true
@@ -3970,6 +3973,7 @@
     if (v === 'magazine') { saveMagazine(); return; }
     if (v === 'gallery') { saveGallery(); return; }
     if (v === 'homepage') { saveValue(); return; }
+    if (v === 'members') { saveMemberRole(); return; }
     closeAllModals();
     showToast('পরিবর্তন সংরক্ষণ করা হয়েছে (ডেমো, ব্যাকএন্ড যুক্ত করলে আসল সংরক্ষণ হবে)');
   });
@@ -3985,6 +3989,12 @@
       const row = editBtn.closest('[data-row]');
       const view = currentView();
       // database-এর সারি: পূর্ণ ডেটা নিয়ে ফর্ম খোলে
+      if (row && row.dataset.id && view === 'members'){
+        editingRow = row;
+        const r = admRows.members.get(row.dataset.id);
+        if (r) openEditModal('edit', { name: r.name, email: r.email, role: r.role });
+        return;
+      }
       if (row && row.dataset.id && view === 'homepage'){
         editingRow = row;
         const r = admRows.values.get(row.dataset.id);
@@ -4005,7 +4015,7 @@
           const r = admRows.events.get(id);
           if (r) openEditModal('edit', {
             title: r.title, date: dhakaDate(r.starts_at), time: dhakaTime(r.starts_at),
-            end: '', place: r.location || '', desc: r.description || ''
+            end: dhakaTime(r.ends_at), place: r.location || '', desc: r.description || ''
           });
         } else if (view === 'magazine'){
           const r = admRows.magazine.get(id);
@@ -4044,13 +4054,34 @@
 
   confirmDeleteBtn.addEventListener('click', async () => {
     const view = currentView();
-    if (rowPendingDelete && rowPendingDelete.dataset.id && admTables[view]){
+    if (rowPendingDelete && rowPendingDelete.dataset.id && view === 'members'){
       if (!dbOk()){ showToast('ডেটাবেস সংযুক্ত নেই'); return; }
-      const cfg = admTables[view];
-      const { error } = await window.sb.from(cfg.table).delete().eq('id', rowPendingDelete.dataset.id);
+      const { error } = await window.sb.rpc('admin_delete_user', { uid: rowPendingDelete.dataset.id });
       rowPendingDelete = null;
       closeAllModals();
       if (error){ showToast('মুছতে ব্যর্থ: ' + error.message); return; }
+      showToast('সদস্য মুছে ফেলা হয়েছে');
+      await loadMembers();
+      return;
+    }
+    if (rowPendingDelete && rowPendingDelete.dataset.id && admTables[view]){
+      if (!dbOk()){ showToast('ডেটাবেস সংযুক্ত নেই'); return; }
+      const cfg = admTables[view];
+      const delId = rowPendingDelete.dataset.id;
+      const old = view === 'magazine' ? admRows.magazine.get(delId) : view === 'gallery' ? admRows.gallery.get(delId) : null;
+      const { error } = await window.sb.from(cfg.table).delete().eq('id', delId);
+      rowPendingDelete = null;
+      closeAllModals();
+      if (error){ showToast('মুছতে ব্যর্থ: ' + error.message); return; }
+      // ডেটাবেসের সারি মোছার পর ফাইলও Storage থেকে মুছে ফেলা
+      if (old){
+        const files = view === 'magazine'
+          ? [['covers', old.cover_path], ['magazine-pdfs', old.pdf_path]]
+          : [['gallery', old.image_path]];
+        for (const [bucket, path] of files){
+          if (path) await window.sb.storage.from(bucket).remove([path]);
+        }
+      }
       showToast('মুছে ফেলা হয়েছে');
       await cfg.load();
       return;
@@ -4127,6 +4158,7 @@
     };
     const coverFile = admFileAt(0), pdfFile = admFileAt(1);
     const editId = editingRow ? editingRow.dataset.id : null;
+    const oldIssue = editId ? admRows.magazine.get(editId) : null;
     modalSaveBtn.disabled = true;
     try {
       if (coverFile) payload.cover_path = await admUpload('covers', coverFile);
@@ -4141,6 +4173,11 @@
       return;
     }
     modalSaveBtn.disabled = false;
+    // নতুন ফাইল দিয়ে বদলালে পুরনোটি Storage থেকে মুছে ফেলা
+    if (oldIssue){
+      if (payload.cover_path && oldIssue.cover_path) await window.sb.storage.from('covers').remove([oldIssue.cover_path]);
+      if (payload.pdf_path && oldIssue.pdf_path) await window.sb.storage.from('magazine-pdfs').remove([oldIssue.pdf_path]);
+    }
     editingRow = null;
     closeAllModals();
     showToast('পত্রিকা সংরক্ষণ করা হয়েছে');
@@ -4173,6 +4210,7 @@
     const caption = formField('caption');
     const file = admFileAt(0);
     const editId = editingRow ? editingRow.dataset.id : null;
+    const oldPhoto = editId ? admRows.gallery.get(editId) : null;
     if (!editId && !file){ showToast('একটি ছবি নির্বাচন করুন'); return; }
     modalSaveBtn.disabled = true;
     try {
@@ -4188,54 +4226,191 @@
       return;
     }
     modalSaveBtn.disabled = false;
+    if (oldPhoto && payload.image_path && oldPhoto.image_path){
+      await window.sb.storage.from('gallery').remove([oldPhoto.image_path]);
+    }
     editingRow = null;
     closeAllModals();
     showToast('ছবি সংরক্ষণ করা হয়েছে');
     await loadGallery();
   }
+  // ---------- লগইন করা এডমিনের নাম (সাইডবারে) ----------
+  async function loadAdminMe(){
+    if (!dbOk()) return;
+    const { data: u } = await window.sb.auth.getUser();
+    if (!u || !u.user) return;
+    const { data } = await window.sb.from('profiles').select('name,role').eq('id', u.user.id).maybeSingle();
+    const name = (data && data.name) || u.user.email || 'এডমিন';
+    const foot = document.querySelector('.adm-sidebar-foot');
+    if (!foot) return;
+    const b = foot.querySelector('b'); if (b) b.textContent = name;
+    const av = foot.querySelector('.adm-avatar'); if (av) av.textContent = name.charAt(0);
+    const role = foot.querySelector('span'); if (role) role.textContent = data && data.role === 'admin' ? 'সুপার এডমিন' : 'এডমিন';
+  }
+
+  // ---------- ড্যাশবোর্ড ও সাইডবারের সংখ্যা (admin_counts ফাংশন) ----------
+  async function loadDashboardCounts(){
+    if (!dbOk()) return;
+    const { data, error } = await window.sb.rpc('admin_counts');
+    if (error || !data) return;   // এডমিন না হলে নীরবে বাদ, নকল সংখ্যাও থাকবে না
+    const cards = document.querySelectorAll('.adm-stat-card b');
+    if (cards.length >= 4){
+      cards[0].textContent = toBnNum(data.articles);
+      cards[1].textContent = toBnNum(data.members);
+      cards[2].textContent = toBnNum(data.issues);
+      cards[3].textContent = toBnNum(data.pending_submissions);
+    }
+    const setNav = (view, n) => {
+      const el = document.querySelector('.adm-nav-item[data-view="' + view + '"] .adm-count');
+      if (el) el.textContent = toBnNum(n);
+    };
+    setNav('writings', data.articles);
+    setNav('magazine', data.issues);
+    setNav('members', data.members);
+    setNav('submissions', data.pending_submissions);
+    const [ev, ga] = await Promise.all([
+      window.sb.from('events').select('id', { count: 'exact', head: true }),
+      window.sb.from('gallery_items').select('id', { count: 'exact', head: true })
+    ]);
+    if (!ev.error) setNav('events', ev.count || 0);
+    if (!ga.error) setNav('gallery', ga.count || 0);
+  }
+
   // ---------- সদস্য ও প্রাপ্ত লেখা (Supabase, পড়া ও অনুমোদন) ----------
   async function loadMembers(){
     if (!dbOk()) return;
     const tbody = document.querySelector('[data-view-panel="members"] tbody');
-    const { data, error } = await window.sb.from('profiles').select('id,name,faculty,batch,role').order('name');
-    if (error){ tbody.innerHTML = admEmptyRow(4, 'সদস্য তালিকা লোড করা যায়নি: ' + escAttr(error.message)); return; }
-    tbody.innerHTML = data.length ? data.map(r => {
-      const isAdmin = r.role === 'admin';
-      return '<tr data-row><td class="adm-cell-title">' + escAttr(r.name || '—') + '</td>' +
+    const [p, em] = await Promise.all([
+      window.sb.from('profiles').select('id,name,faculty,batch,role').order('name'),
+      window.sb.rpc('admin_member_emails')
+    ]);
+    if (p.error){ tbody.innerHTML = admEmptyRow(6, 'সদস্য তালিকা লোড করা যায়নি: ' + escAttr(p.error.message)); return; }
+    const emails = {};
+    if (!em.error) (em.data || []).forEach(x => { emails[x.id] = x.email; });
+    admRows.members.clear();
+    p.data.forEach(r => admRows.members.set(r.id, Object.assign({}, r, { email: emails[r.id] || '' })));
+    tbody.innerHTML = p.data.length ? p.data.map(r => {
+      const label = r.role === 'admin' ? 'এডমিন' : (r.role === 'editor' ? 'সম্পাদক' : 'সদস্য');
+      return '<tr data-row data-id="' + escAttr(r.id) + '">' +
+        '<td class="adm-cell-title">' + escAttr(r.name || '—') + '</td>' +
+        '<td>' + escAttr(emails[r.id] || '—') + '</td>' +
         '<td>' + escAttr(r.faculty || '—') + '</td>' +
         '<td>' + escAttr(r.batch || '—') + '</td>' +
-        '<td><span class="adm-tag-pill' + (isAdmin ? ' adm-maroon' : '') + '">' + (isAdmin ? 'এডমিন' : 'সদস্য') + '</span></td></tr>';
-    }).join('') : admEmptyRow(4, 'এখনো কোনো সদস্য নেই।');
+        '<td><span class="adm-tag-pill' + (r.role === 'admin' ? ' adm-maroon' : '') + '">' + label + '</span></td>' +
+        '<td class="adm-row-actions">' +
+          '<button class="adm-btn-icon" data-action="edit" title="ভূমিকা বদলান"><i data-lucide="pencil" width="16" height="16"></i></button>' +
+          '<button class="adm-btn-icon adm-danger" data-action="delete" title="মুছুন"><i data-lucide="trash-2" width="16" height="16"></i></button>' +
+        '</td></tr>';
+    }).join('') : admEmptyRow(6, 'এখনো কোনো সদস্য নেই।');
     labelTableCells(document.querySelector('[data-view-panel="members"]'));
+    renderIcons();
+  }
+
+  async function saveMemberRole(){
+    const id = editingRow && editingRow.dataset.id;
+    if (!id) return;
+    modalSaveBtn.disabled = true;
+    const { error } = await window.sb.rpc('admin_set_role', { uid: id, new_role: formField('role') });
+    modalSaveBtn.disabled = false;
+    if (error){ showToast('ভূমিকা বদলানো যায়নি: ' + error.message); return; }
+    editingRow = null;
+    closeAllModals();
+    showToast('ভূমিকা হালনাগাদ হয়েছে');
+    await loadMembers();
   }
 
   async function loadSubmissions(){
     if (!dbOk()) return;
     const tbody = document.querySelector('[data-view-panel="submissions"] tbody');
     const { data, error } = await window.sb.from('submissions')
-      .select('id,user_id,title,genre,file_path,status,created_at')
+      .select('id,user_id,title,genre,body_text,file_path,status,created_at')
       .eq('status', 'pending').order('created_at', { ascending: false });
     if (error){ tbody.innerHTML = admEmptyRow(5, 'লেখা লোড করা যায়নি: ' + escAttr(error.message)); return; }
     const ids = [...new Set(data.map(r => r.user_id))];
-    const names = {};
+    const profs = {};
     if (ids.length){
-      const p = await window.sb.from('profiles').select('id,name').in('id', ids);
-      (p.data || []).forEach(x => { names[x.id] = x.name; });
+      const p = await window.sb.from('profiles').select('id,name,faculty,batch,bio,avatar_url').in('id', ids);
+      (p.data || []).forEach(x => { profs[x.id] = x; });
     }
-    tbody.innerHTML = data.length ? data.map(r =>
-      '<tr data-row data-sub-id="' + escAttr(r.id) + '">' +
-      '<td class="adm-cell-title">' + escAttr(r.title) + '</td>' +
-      '<td>' + escAttr(names[r.user_id] || '—') + '</td>' +
-      '<td><span class="adm-tag-pill">' + escAttr(r.genre || '—') + '</span></td>' +
-      '<td>' + (r.file_path ? 'ফাইল' : 'লিখিত টেক্সট') + '</td>' +
-      '<td class="adm-row-actions">' +
-        '<button class="adm-btn-icon" data-sub-act="approve" title="অনুমোদন" style="color:var(--forest);"><i data-lucide="check" width="16" height="16"></i></button>' +
-        '<button class="adm-btn-icon adm-danger" data-sub-act="reject" title="প্রত্যাখ্যান"><i data-lucide="x" width="16" height="16"></i></button>' +
-      '</td></tr>').join('')
-      : admEmptyRow(5, 'পর্যালোচনার অপেক্ষায় কোনো লেখা নেই।');
+    admRows.submissions.clear();
+    admRows.authorOrig.clear();
+    const store = window.admSubStore;
+    data.forEach(r => {
+      const pr = profs[r.user_id] || {};
+      admRows.submissions.set(r.id, r);
+      admRows.authorOrig.set(r.id, { name: pr.name || '', faculty: pr.faculty || '', batch: pr.batch || '', bio: pr.bio || '', avatar_url: pr.avatar_url || '' });
+      // পর্যালোচনা পেজ এই তথ্য থেকে ভরবে
+      if (store) store[r.id] = {
+        name: pr.name || '', faculty: pr.faculty || '', batch: pr.batch || '', bio: pr.bio || '',
+        genre: r.genre || '', title: r.title || '', pic: pr.avatar_url || '',
+        body: (r.body_text || '').split(/\n\s*\n/).map(t => '<p>' + escAttr(t.trim()) + '</p>').join(''),
+        files: r.file_path ? [{ name: r.file_path.split('/').pop(), size: 0 }] : []
+      };
+    });
+    tbody.innerHTML = data.length ? data.map(r => {
+      const hasFile = !!r.file_path;
+      return '<tr data-row data-sub="' + escAttr(r.id) + '" data-sub-id="' + escAttr(r.id) + '">' +
+        '<td class="adm-cell-title">' + escAttr(r.title) + '</td>' +
+        '<td>' + escAttr((profs[r.user_id] && profs[r.user_id].name) || '—') + '</td>' +
+        '<td><span class="adm-tag-pill">' + escAttr(r.genre || '—') + '</span></td>' +
+        '<td>' + (hasFile ? 'ফাইল' : 'লিখিত টেক্সট') + '</td>' +
+        '<td class="adm-row-actions">' +
+          '<button class="adm-btn-icon" data-action="review" title="দেখুন"><i data-lucide="eye" width="16" height="16"></i></button>' +
+          (hasFile ? '<button class="adm-btn-icon" data-sub-file="1" title="ফাইল ডাউনলোড"><i data-lucide="download" width="16" height="16"></i></button>' : '') +
+          '<button class="adm-btn-icon" data-sub-act="approve" title="অনুমোদন" style="color:var(--forest);"><i data-lucide="check" width="16" height="16"></i></button>' +
+          '<button class="adm-btn-icon adm-danger" data-sub-act="reject" title="প্রত্যাখ্যান"><i data-lucide="x" width="16" height="16"></i></button>' +
+        '</td></tr>';
+    }).join('') : admEmptyRow(5, 'পর্যালোচনার অপেক্ষায় কোনো লেখা নেই।');
     labelTableCells(document.querySelector('[data-view-panel="submissions"]'));
     renderIcons();
   }
+
+  // পর্যালোচনা পেজের সংরক্ষণ: লেখা, লেখকের তথ্য ও ছবি
+  window.admSaveSubmission = async function(id, rec){
+    const row = admRows.submissions.get(id);
+    if (!row){ showToast('লেখাটি খুঁজে পাওয়া যায়নি'); return; }
+    const html = (rec.body || '').replace(/<\/p>|<br\s*\/?>/gi, '\n');
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    const text = box.textContent.replace(/\n{3,}/g, '\n\n').trim();
+    const payload = { title: rec.title, genre: rec.genre };
+    if (text) payload.body_text = text;   // লেখা খালি হলে আগের মূল অংশ থাকবে
+    const { error } = await window.sb.from('submissions').update(payload).eq('id', id);
+    if (error){ showToast('লেখা সংরক্ষণ ব্যর্থ: ' + error.message); return; }
+
+    // লেখকের তথ্য বা ছবি বদলালে প্রোফাইল হালনাগাদ (এডমিন ফাংশনের মাধ্যমে)
+    const orig = admRows.authorOrig.get(id) || {};
+    const changed = ['name', 'faculty', 'batch', 'bio'].some(k => (rec[k] || '') !== (orig[k] || ''));
+    const newPic = !!rec.pic && rec.pic.indexOf('data:') === 0;
+    if (changed || newPic){
+      let avatar = null;
+      if (newPic){
+        const blob = await (await fetch(rec.pic)).blob();
+        const path = row.user_id + '/profile.webp';
+        const up = await window.sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: blob.type || 'image/webp' });
+        if (up.error){ showToast('ছবি আপলোড ব্যর্থ: ' + up.error.message); return; }
+        avatar = window.sb.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
+      }
+      const res = await window.sb.rpc('admin_update_author', {
+        uid: row.user_id, p_name: rec.name, p_faculty: rec.faculty, p_batch: rec.batch, p_bio: rec.bio, p_avatar: avatar
+      });
+      if (res.error){ showToast('লেখকের তথ্য সংরক্ষণ ব্যর্থ: ' + res.error.message); return; }
+    }
+    showToast('লেখা সংরক্ষণ করা হয়েছে');
+    loadSubmissions();
+  };
+
+  // প্রাপ্ত লেখার ফাইল: ব্যক্তিগত বাকেট, তাই সাময়িক লিংক বানিয়ে খোলা হয়
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-sub-file]');
+    if (!btn || !dbOk()) return;
+    const row = btn.closest('[data-sub-id]');
+    const r = row && admRows.submissions.get(row.dataset.subId);
+    if (!r || !r.file_path) return;
+    const { data, error } = await window.sb.storage.from('submissions').createSignedUrl(r.file_path, 300);
+    if (error){ showToast('ফাইল খোলা যায়নি: ' + error.message); return; }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  });
 
   // অনুমোদন / প্রত্যাখ্যান: review_submission ফাংশন (শুধু এডমিন চালাতে পারেন)
   document.addEventListener('click', async e => {
@@ -4256,7 +4431,7 @@
   async function loadHomepage(){
     if (!dbOk()) return;
     const [c, v] = await Promise.all([
-      window.sb.from('site_content').select('key,value').in('key', ['hero_stats', 'about']),
+      window.sb.from('site_content').select('key,value').in('key', ['hero_stats', 'hero', 'about']),
       window.sb.from('site_values').select('id,title,description,sort_order').order('sort_order').order('id')
     ]);
     if (c.error || v.error){ showToast('হোমপেজ লোড করা যায়নি'); return; }
@@ -4266,6 +4441,9 @@
     document.getElementById('heroMembers').value = hs.members || '';
     document.getElementById('heroIssues').value = hs.issues || '';
     document.getElementById('heroYears').value = hs.years || '';
+    const hero = content.hero || {};
+    document.getElementById('heroTitle').value = hero.title || '';
+    document.getElementById('heroDesc').value = hero.desc || '';
     const about = content.about || {};
     admAboutTitle = about.title || '';
     document.getElementById('aboutText').value = (about.paragraphs || []).join('\n\n');
@@ -4285,15 +4463,23 @@
   }
 
   async function saveHero(btn){
-    const value = {
+    const stats = {
       members: document.getElementById('heroMembers').value.trim(),
       issues: document.getElementById('heroIssues').value.trim(),
       years: document.getElementById('heroYears').value.trim()
     };
+    const hero = {
+      title: document.getElementById('heroTitle').value.trim(),
+      desc: document.getElementById('heroDesc').value.trim()
+    };
     btn.disabled = true;
-    const { error } = await window.sb.from('site_content').upsert({ key: 'hero_stats', value: value }, { onConflict: 'key' });
+    const [a, b] = await Promise.all([
+      window.sb.from('site_content').upsert({ key: 'hero_stats', value: stats }, { onConflict: 'key' }),
+      window.sb.from('site_content').upsert({ key: 'hero', value: hero }, { onConflict: 'key' })
+    ]);
     btn.disabled = false;
-    showToast(error ? 'সংরক্ষণ ব্যর্থ: ' + error.message : 'হিরো সংখ্যা সংরক্ষণ করা হয়েছে');
+    const err = a.error || b.error;
+    showToast(err ? 'সংরক্ষণ ব্যর্থ: ' + err.message : 'হিরো তথ্য সংরক্ষণ করা হয়েছে');
   }
 
   async function saveAbout(btn){
@@ -4336,16 +4522,26 @@
     put('setAddress', 'address');
     put('setFacebook', 'facebook_url');
     put('setFooter', 'footer_slogan');
+    document.getElementById('setSiteName').value = typeof s.site_name === 'string' && s.site_name ? s.site_name : 'পরিবর্তন, বাংলা সাহিত্য ক্লাব';
   }
 
   async function saveSettings(btn){
-    const pairs = [['contact_email', 'setEmail'], ['contact_phone', 'setPhone'], ['address', 'setAddress'],
-                   ['facebook_url', 'setFacebook'], ['footer_slogan', 'setFooter']];
+    const pairs = [['site_name', 'setSiteName'], ['contact_email', 'setEmail'], ['contact_phone', 'setPhone'],
+                   ['address', 'setAddress'], ['facebook_url', 'setFacebook'], ['footer_slogan', 'setFooter']];
     const rows = pairs.map(([key, id]) => ({ key: key, value: document.getElementById(id).value.trim() }));
     btn.disabled = true;
-    const { error } = await window.sb.from('site_settings').upsert(rows, { onConflict: 'key' });
+    try {
+      const logoInput = document.querySelector('[data-view-panel="settings"] input[type=file]');
+      const logoFile = logoInput && logoInput.files && logoInput.files[0];
+      if (logoFile) rows.push({ key: 'logo_path', value: await admUpload('covers', logoFile) });
+      const { error } = await window.sb.from('site_settings').upsert(rows, { onConflict: 'key' });
+      if (error) throw new Error(error.message);
+      if (logoFile) logoInput.value = '';
+      showToast('সেটিংস সংরক্ষণ করা হয়েছে (লোগো পরিবর্তন হলে সাইট রিফ্রেশ করুন)');
+    } catch (err) {
+      showToast('সংরক্ষণ ব্যর্থ: ' + err.message);
+    }
     btn.disabled = false;
-    showToast(error ? 'সংরক্ষণ ব্যর্থ: ' + error.message : 'সেটিংস সংরক্ষণ করা হয়েছে');
   }
 
   // সংরক্ষণ বাটনগুলো যুক্ত করা (পেজে আগে থেকেই আছে)
@@ -4390,7 +4586,7 @@
     const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
     // ডেমো ডেটা: প্রতিটি সারির data-sub এর সাথে মেলে
-    const SUBMISSIONS = {
+    const SUBMISSIONS = window.admSubStore = {
       '1': {
         name: 'ফাহিম হাসান', faculty: 'কৃষি অনুষদ', batch: '১৩', genre: 'কবিতা', title: 'নদীর কাছে চিঠি', pic: '',
         body: '<p>নদী, তোমার কাছে একটা চিঠি লিখব ভাবি,<br>ঠিকানা জানি না, তাই স্রোতের হাতে দিই।<br>ভাসতে ভাসতে যদি পৌঁছে যায় সাগরে,<br>সেখানেও কেউ হয়তো আমার নাম পড়বে।</p><p>সারা বিকেল ঘাটে বসে থাকি একা,<br>ঢেউয়েরা শেখায় ফিরে আসা কাকে বলে।<br>চিঠির ভাঁজে রেখে দিলাম একটুখানি রোদ,<br>আর অল্প একটু না-বলা কথা।</p>',
@@ -4576,7 +4772,7 @@
 
       editor.dataset.placeholder = (!rec.body && rec.files.length) ? FILE_ONLY_PLACEHOLDER : DEFAULT_PLACEHOLDER;
       state.dirty = false;
-      showToast('পরিবর্তন সংরক্ষণ করা হয়েছে (ডেমো, ব্যাকএন্ড যুক্ত করলে আসল সংরক্ষণ হবে)');
+      if (window.admSaveSubmission) window.admSaveSubmission(currentId, rec);
     });
   })();
 
@@ -4594,7 +4790,7 @@
     const form = document.getElementById('admLoginForm');
     const errorBox = document.getElementById('admLoginError');
 
-    function showApp(){ gate.style.display = 'none'; app.style.display = 'flex'; renderIcons(); }
+    function showApp(){ gate.style.display = 'none'; app.style.display = 'flex'; renderIcons(); if (typeof loadDashboardCounts === 'function') loadDashboardCounts(); if (typeof loadAdminMe === 'function') loadAdminMe(); }
     function showGate(){ app.style.display = 'none'; gate.style.display = 'flex'; }
     function fail(msg){ errorBox.textContent = msg; errorBox.style.display = 'block'; }
 
@@ -6903,7 +7099,7 @@
           (r.description ? '<p>' + escapeHtml(r.description) + '</p>' : '') +
           '<div class="tl-meta">' +
           (r.location ? '<span><i data-lucide="map-pin" width="14" height="14"></i> ' + escapeHtml(r.location) + '</span>' : '') +
-          (d ? '<span><i data-lucide="clock" width="14" height="14"></i> ' + escapeHtml(bnTime(d)) + '</span>' : '') +
+          (d ? '<span><i data-lucide="clock" width="14" height="14"></i> ' + escapeHtml(bnTime(d)) + (r.ends_at ? ' থেকে ' + escapeHtml(bnTime(new Date(r.ends_at))) : '') + '</span>' : '') +
           '</div></div></div></div>';
       }
       function galleryItem(r, cls){
@@ -6918,7 +7114,7 @@
           const [rA, rI, rE, rG, rS, rC, rV, rP] = await Promise.all([
             q('articles', 'id,legacy_id,slug,title,genre,tags,body,author_name,author_sub,author_bio,published_at').eq('status', 'published').order('published_at', { ascending: false }),
             q('magazine_issues', 'id,issue_no,title,cover_path,pdf_path,published_on').eq('published', true).order('published_on', { ascending: false, nullsFirst: false }),
-            q('events', 'id,title,description,starts_at,location').eq('published', true).order('starts_at', { ascending: false, nullsFirst: false }),
+            q('events', 'id,title,description,starts_at,ends_at,location').eq('published', true).order('starts_at', { ascending: false, nullsFirst: false }),
             q('gallery_items', 'id,caption,image_path').eq('published', true).order('sort_order').order('created_at', { ascending: false }),
             q('site_settings', 'key,value'),
             q('site_content', 'key,value'),
@@ -6975,10 +7171,27 @@
             const tel = document.getElementById('ftTel'); if (tel) { if (set.contact_phone) tel.href = 'tel:' + String(set.contact_phone).replace(/[^\d+]/g, ''); else tel.style.display = 'none'; }
             const ml = document.getElementById('ftMail'); if (ml && set.contact_email) ml.href = 'mailto:' + set.contact_email;
             hideIfEmpty('ftPhone', set.contact_phone, 'li'); hideIfEmpty('ftAddress', set.address, 'li');
+            if (set.site_name) {
+              const brandTxt = document.querySelector('.footer-brand-text'); if (brandTxt) brandTxt.textContent = set.site_name;
+              document.title = set.site_name;
+            }
+            if (set.logo_path) {
+              const logoUrl = pub('covers', set.logo_path);
+              const navL = document.querySelector('header .brand-logo'); if (navL) navL.src = logoUrl;
+              const fl = document.getElementById('footerLogo');
+              if (fl) { fl.src = logoUrl; fl.closest('.footer-brand').classList.add('has-logo'); }
+              [['admSidebarLogo', '.adm-sidebar-brand'], ['admLoginLogo', '.adm-login-brand']].forEach(([id, wrap]) => {
+                const img = document.getElementById(id);
+                if (img) { img.src = logoUrl; img.closest(wrap).classList.add('has-logo'); }
+              });
+            }
           }
 
           // --- হোমপেজ টেক্সট: হিরো স্ট্যাটস ও "আমাদের সম্পর্কে" ---
           const content = {}; (rC.data || []).forEach(r => { content[r.key] = r.value; });
+          const heroC = content.hero || {};
+          if (heroC.title) { const h = document.querySelector('.hero-copy h1'); if (h) h.innerHTML = escapeHtml(heroC.title).replace(/\*(.+?)\*/, '<em>$1</em>'); }
+          if (heroC.desc) { const l = document.querySelector('.hero-copy .lede'); if (l) l.textContent = heroC.desc; }
           if (content.hero_stats) {
             const els = document.querySelectorAll('.hero-stats .stat b');
             ['members', 'issues', 'years'].forEach((k, i) => { if (els[i] && content.hero_stats[k]) els[i].textContent = content.hero_stats[k]; });
