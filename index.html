@@ -8,6 +8,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ===== Supabase config: Dashboard > Project Settings > API থেকে নিন =====
+  // শুধু anon key বসান। service_role key কখনো এখানে নয়।
+  const SUPABASE_URL = "YOUR_PROJECT_URL";
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+  const sbReady = !SUPABASE_URL.startsWith("YOUR_") && window.supabase;
+  window.sb = sbReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  async function sbIsAdmin(userId){
+    if (!window.sb) return false;
+    const { data, error } = await window.sb.from('profiles').select('role').eq('id', userId).single();
+    return !error && data && data.role === 'admin';
+  }
+</script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <style>
   :root{
@@ -2531,6 +2545,7 @@
   .read-author-card .read-author-id h4{ margin:0; }
   .read-author-card .read-author-id .read-author-sub{ margin:0; font-size:0.9rem; line-height:1.4; }
   .read-author-card .read-author-head{ margin-bottom:16px; }
+#readBody p, #readBody blockquote { white-space: pre-line; }
 </style>
 </head>
 <body>
@@ -2922,19 +2937,11 @@
           <input type="email" id="contactEmail" name="contactEmail" placeholder="example@email.com">
         </div>
         <div class="field">
-          <label for="contactInterest">আগ্রহের ক্ষেত্র</label>
-          <select id="contactInterest" name="contactInterest">
-            <option>কবিতা</option>
-            <option>গল্প</option>
-            <option>প্রবন্ধ</option>
-            <option>সম্পাদনা</option>
-          </select>
-        </div>
-        <div class="field">
           <label for="contactMessage">বার্তা</label>
           <textarea id="contactMessage" name="contactMessage" placeholder="আপনার কথা লিখুন..."></textarea>
         </div>
-        <button class="btn btn-primary"><i data-lucide="send" width="18" height="18"></i> পাঠিয়ে দিন</button>
+        <div class="form-msg" id="contactMsg" aria-live="polite" style="margin-bottom:12px;"></div>
+        <button type="button" class="btn btn-primary" id="contactSendBtn"><i data-lucide="send" width="18" height="18"></i> পাঠিয়ে দিন</button>
       </div>
     </div>
   </div>
@@ -4134,28 +4141,46 @@
 <!-- /#adminApp -->
 
 <script>
-  // ---------- Login gate ----------
+  // ---------- Login gate (Supabase Auth, admin role checked on the server) ----------
   (function(){
-    // Change these to update the admin login credentials.
-    const ADMIN_EMAIL = "admin@poriborton.org";
-    const ADMIN_PASSWORD = "Poriborton@2026";
-
     const gate = document.getElementById('admLoginGate');
     const app = document.getElementById('admAdminApp');
     const form = document.getElementById('admLoginForm');
     const errorBox = document.getElementById('admLoginError');
 
-    form.addEventListener('submit', function(e){
+    function showApp(){ gate.style.display = 'none'; app.style.display = 'flex'; renderIcons(); }
+    function showGate(){ app.style.display = 'none'; gate.style.display = 'flex'; }
+    function fail(msg){ errorBox.textContent = msg; errorBox.style.display = 'block'; }
+
+    // Restore an existing session on page load
+    (async function(){
+      if (!window.sb) return;
+      const { data } = await sb.auth.getSession();
+      if (data.session && await sbIsAdmin(data.session.user.id)) showApp();
+    })();
+
+    form.addEventListener('submit', async function(e){
       e.preventDefault();
+      errorBox.style.display = 'none';
+      if (!window.sb){ fail('Supabase এখনো সংযুক্ত নয়: SUPABASE_URL ও SUPABASE_ANON_KEY বসান।'); return; }
       const email = document.getElementById('admLoginEmail').value.trim();
       const pass = document.getElementById('admLoginPassword').value;
-      if (email === ADMIN_EMAIL && pass === ADMIN_PASSWORD){
-        gate.style.display = 'none';
-        app.style.display = 'flex';
-        renderIcons();
-      } else {
-        errorBox.style.display = 'block';
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error){ fail('ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।'); return; }
+      if (!(await sbIsAdmin(data.user.id))){
+        await sb.auth.signOut();
+        fail('এই অ্যাকাউন্টের অ্যাডমিন অনুমতি নেই।');
+        return;
       }
+      form.reset();
+      showApp();
+    });
+
+    // Logout ends the real session
+    const logoutBtn = document.querySelector('#admin-page .adm-logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', async function(){
+      if (window.sb) await sb.auth.signOut();
+      showGate();
     });
   })();
 </script>
@@ -4200,14 +4225,7 @@
           </div>
           <div class="field">
             <label for="jomaFaculty">ফ্যাকাল্টি</label>
-            <select id="jomaFaculty" required>
-              <option value="">ফ্যাকাল্টি নির্বাচন করুন</option>
-              <option>কৃষি অনুষদ</option>
-              <option>কৃষি অর্থনীতি অনুষদ</option>
-              <option>কৃষি প্রকৌশল ও প্রযুক্তি অনুষদ</option>
-              <option>ভেটেরিনারি ও এনিম্যাল সায়েন্স অনুষদ</option>
-              <option>অন্যান্য</option>
-            </select>
+            <input type="text" id="jomaFaculty" placeholder="যেমনঃ কৃষি অনুষদ" maxlength="80" autocomplete="off" required>
           </div>
           <div class="field">
             <label for="jomaBatch">ব্যাচ</label>
@@ -5185,15 +5203,15 @@
           <img id="footerLogo" class="footer-logo" alt="পরিবর্তন" width="220" height="77">
           <span class="footer-brand-text">পরিবর্তন</span>
         </a>
-        <p>প্লেসহোল্ডার টেক্সট, ক্লাবের এক লাইনের পরিচিতি বা স্লোগান এখানে থাকবে।</p>
+        <p id="ftSlogan">প্লেসহোল্ডার টেক্সট, ক্লাবের এক লাইনের পরিচিতি বা স্লোগান এখানে থাকবে।</p>
         <div class="footer-social">
-          <a href="#" aria-label="ফেসবুক">
+          <a href="#" id="ftFb" aria-label="ফেসবুক">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 22v-8.5H16l.5-3.5h-3V7.8c0-1 .3-1.7 1.7-1.7H16.6V3.1C16.3 3 15.3 3 14.2 3c-2.5 0-4.2 1.5-4.2 4.3V10H7.5v3.5H10V22h3.5z"/></svg>
           </a>
-          <a href="tel:+8801700000000" aria-label="কল করুন">
+          <a href="tel:+8801700000000" id="ftTel" aria-label="কল করুন">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
           </a>
-          <a href="mailto:info@poriborton.org" aria-label="ইমেইল">
+          <a href="mailto:info@poriborton.org" id="ftMail" aria-label="ইমেইল">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           </a>
           <a href="#join" aria-label="ঠিকানা">
@@ -5213,17 +5231,17 @@
       <div class="footer-col">
         <h5>সম্পদ</h5>
         <ul>
-          <li><a href="#">লেখার নিয়মাবলী</a></li>
-          <li><a href="#">সদস্য নির্দেশিকা</a></li>
-          <li><a href="#">প্রায়শ জিজ্ঞাসা</a></li>
+          <li><a href="#" data-page="writing-rules">লেখার নিয়মাবলী</a></li>
+          <li><a href="#" data-page="member-guide">সদস্য নির্দেশিকা</a></li>
+          <li><a href="#" data-page="faq">প্রায়শ জিজ্ঞাসা</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h5>যোগাযোগ</h5>
         <ul>
-          <li><i data-lucide="mail" width="14" height="14"></i>&nbsp; info@poriborton.org</li>
-          <li><i data-lucide="phone" width="14" height="14"></i>&nbsp; ০১৭০০-০০০০০০</li>
-          <li><i data-lucide="map-pin" width="14" height="14"></i>&nbsp; ঠিকানা লেখা হবে</li>
+          <li><i data-lucide="mail" width="14" height="14"></i>&nbsp; <span id="ftEmail">info@poriborton.org</span></li>
+          <li><i data-lucide="phone" width="14" height="14"></i>&nbsp; <span id="ftPhone">০১৭০০-০০০০০০</span></li>
+          <li><i data-lucide="map-pin" width="14" height="14"></i>&nbsp; <span id="ftAddress">ঠিকানা লেখা হবে</span></li>
         </ul>
       </div>
     </div>
@@ -5398,7 +5416,7 @@
   }
 
   // ---------- Home page: Writings filter tabs (no pagination, original behavior) ----------
-  (function(){
+  window.__initHomeFilter = function(){
     const chips = document.querySelectorAll('#homeFilterRow .chip[data-filter]');
     const cards = document.querySelectorAll('#cardGrid .write-card');
     const emptyNote = document.getElementById('emptyNote');
@@ -5437,10 +5455,10 @@
         applyFilter(chip.dataset.filter);
       });
     });
-  })();
+  };
 
   // ---------- Lekha subpage: filter (বিভাগ + লেখক পপআপ) + pagination ----------
-  (function(){
+  window.__initLekha = function(){
     const chips = document.querySelectorAll('#lekhaFilterRow .chip[data-filter]');
     const allCards = Array.from(document.querySelectorAll('#lekhaCardGrid .write-card'));
     const emptyNote = document.getElementById('lekhaEmptyNote');
@@ -5616,7 +5634,7 @@
 
     renderPage(1);
     window.__lekhaRenderPage = renderPage;
-  })();
+  };
 
   // ---------- Generic simple pagination (magazine / onushthan / gallery) ----------
   function setupSimplePagination(gridId, itemSelector, pagerId, perPage){
@@ -5640,9 +5658,11 @@
     return renderPage;
   }
 
-  setupSimplePagination('magGrid', '.mag-card', 'magazinePager', 8);
-  setupSimplePagination('eventList', '.tl-item', 'onushthanPager', 5);
-  setupSimplePagination('galleryGrid', '.g-item', 'galleryPager', 6);
+  window.__initSimplePaginations = function(){
+    setupSimplePagination('magGrid', '.mag-card', 'magazinePager', 8);
+    setupSimplePagination('eventList', '.tl-item', 'onushthanPager', 5);
+    setupSimplePagination('galleryGrid', '.g-item', 'galleryPager', 6);
+  };
 
   // ---------- Modals (Login / Join) ----------
   let lastFocus = null;
@@ -5659,6 +5679,7 @@
     const first = m.querySelector('input');
     setTimeout(() => first && first.focus(), 120);
   }
+  window.openModal = openModal;
   function closeModal(id, keepScrollLock){
     const m = document.getElementById(id);
     if (!m) return;
@@ -5706,47 +5727,67 @@
     box.textContent = text;
   }
   document.querySelectorAll('form[data-form]').forEach(form => {
-    form.addEventListener('submit', e => {
+    form.addEventListener('submit', async e => {
       e.preventDefault();
       const submitBtn = form.querySelector('button[type=submit], .btn-primary');
       if (submitBtn && submitBtn.disabled) return;
       const kind = form.dataset.form;
       const inputs = form.querySelectorAll('input:not([type=checkbox])');
       const vals = {}; inputs.forEach(i => vals[i.id] = i.value.trim());
+      const rawPass = kind === 'login' ? (document.getElementById('loginPass') || {}).value : (document.getElementById('joinPass') || {}).value;
 
-      let valid = false;
       if (kind === 'login'){
-        if (!emailOk(vals.loginEmail)) { showMsg(form,'err','সঠিক ইমেইল ঠিকানা দিন।'); }
-        else if (!vals.loginPass) { showMsg(form,'err','পাসওয়ার্ড দিন।'); }
-        else {
-          valid = true;
-          showMsg(form,'ok','লগইন সফল হয়েছে! (ডেমো, ব্যাকএন্ড যুক্ত করলে এখানে আসল লগইন হবে)');
-        }
+        if (!emailOk(vals.loginEmail)) { showMsg(form,'err','সঠিক ইমেইল ঠিকানা দিন।'); return; }
+        if (!rawPass) { showMsg(form,'err','পাসওয়ার্ড দিন।'); return; }
       } else {
-        if (!vals.joinName) { showMsg(form,'err','আপনার পূর্ণ নাম লিখুন।'); }
-        else if (!emailOk(vals.joinEmail)) { showMsg(form,'err','সঠিক ইমেইল ঠিকানা দিন।'); }
-        else if (vals.joinPass.length < 6) { showMsg(form,'err','পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); }
-        else {
-          valid = true;
-          showMsg(form,'ok','ধন্যবাদ! আপনার সদস্যপদের আবেদন গ্রহণ করা হয়েছে।');
-        }
+        if (!vals.joinName) { showMsg(form,'err','আপনার পূর্ণ নাম লিখুন।'); return; }
+        if (!emailOk(vals.joinEmail)) { showMsg(form,'err','সঠিক ইমেইল ঠিকানা দিন।'); return; }
+        if (!rawPass || rawPass.length < 6) { showMsg(form,'err','পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return; }
       }
-      if (!valid) return;
+      if (!window.sb){ showMsg(form,'err','Supabase এখনো সংযুক্ত নয়।'); return; }
+
       if (submitBtn) submitBtn.disabled = true;
-      setTimeout(() => {
-        form.reset();
-        setLoggedIn(true);
+      try {
+        if (kind === 'login'){
+          const { error } = await sb.auth.signInWithPassword({ email: vals.loginEmail, password: rawPass });
+          if (error){ showMsg(form,'err','ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।'); return; }
+          showMsg(form,'ok','লগইন সফল হয়েছে!');
+          form.reset();
+        } else {
+          const { data, error } = await sb.auth.signUp({
+            email: vals.joinEmail, password: rawPass,
+            options: { data: { name: vals.joinName } }
+          });
+          if (error){ showMsg(form,'err','অ্যাকাউন্ট তৈরি করা যায়নি: ' + error.message); return; }
+          form.reset();
+          if (data.session) showMsg(form,'ok','ধন্যবাদ! আপনার অ্যাকাউন্ট তৈরি হয়েছে।');
+          else showMsg(form,'ok','ধন্যবাদ! নিশ্চিত করার জন্য আপনার ইমেইলে একটি লিংক পাঠানো হয়েছে।');
+        }
+      } finally {
         if (submitBtn) submitBtn.disabled = false;
-      }, 450);
+      }
     });
   });
-  document.querySelector('[data-forgot]').addEventListener('click', e => {
+  document.querySelector('[data-forgot]').addEventListener('click', async e => {
     e.preventDefault();
     const f = document.querySelector('form[data-form=login]');
-    showMsg(f,'ok','পাসওয়ার্ড রিসেট লিংক পাঠানোর ব্যবস্থা এখানে যুক্ত হবে।');
+    const mail = (document.getElementById('loginEmail') || {}).value;
+    if (!mail || !emailOk(mail.trim())){ showMsg(f,'err','রিসেট লিংকের জন্য উপরে আপনার ইমেইল ঠিকানা দিন।'); return; }
+    if (!window.sb){ showMsg(f,'err','Supabase এখনো সংযুক্ত নয়।'); return; }
+    const { error } = await sb.auth.resetPasswordForEmail(mail.trim(), { redirectTo: location.href.split('#')[0] });
+    showMsg(f, error ? 'err' : 'ok', error ? 'রিসেট লিংক পাঠানো যায়নি।' : 'পাসওয়ার্ড রিসেট লিংক ইমেইলে পাঠানো হয়েছে।');
   });
 
-  // ---------- সদস্য হোন -> লেখা পাঠান (login-state swap, demo) ----------
+  // Keep the nav in sync with the real Supabase session (survives refresh)
+  if (window.sb){
+    sb.auth.getSession().then(({ data }) => setLoggedIn(!!data.session));
+    sb.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session);
+      setTimeout(() => window.dispatchEvent(new CustomEvent('pb-auth')), 0);   // কলব্যাকের ভেতরে সরাসরি Supabase কল নয়
+    });
+  }
+
+  // ---------- সদস্য হোন -> লেখা পাঠান (login-state swap, driven by Supabase session) ----------
   function setLoggedIn(on){
     document.getElementById('navLoginBtn').style.display = on ? 'none' : '';
     document.getElementById('navJoinBtn').style.display = on ? 'none' : '';
@@ -5754,26 +5795,6 @@
     document.getElementById('heroJoinBtn').style.display = on ? 'none' : '';
     document.getElementById('heroSubmitBtn').style.display = on ? '' : 'none';
     renderIcons();
-  }
-
-  // Contact form (bottom section), give the send button feedback too
-  const contactBtn = document.querySelector('.form-card .btn-primary');
-  if (contactBtn){
-    contactBtn.addEventListener('click', () => {
-      if (contactBtn.disabled) return;
-      const card = contactBtn.closest('.form-card');
-      const name = card.querySelector('input[type=text]').value.trim();
-      const mail = card.querySelector('input[type=email]').value.trim();
-      if (!name || !emailOk(mail)){ alert('অনুগ্রহ করে নাম ও সঠিক ইমেইল ঠিকানা দিন।'); return; }
-      contactBtn.disabled = true;
-      contactBtn.innerHTML = '✓ পাঠানো হয়েছে';
-      setTimeout(() => {
-        contactBtn.innerHTML = '<i data-lucide="send" width="18" height="18"></i> পাঠিয়ে দিন';
-        renderIcons();
-        card.querySelectorAll('input,textarea').forEach(i => i.value = '');
-        contactBtn.disabled = false;
-      }, 2200);
-    });
   }
 
   // Header background on scroll
@@ -5850,7 +5871,15 @@
       } catch (e) { return null; }
     }
     function readProfile(){
-      try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch (e) { return null; }
+      let d = null;
+      try { d = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch (e) {}
+      const p = window.__pbProfile;      // লগইন থাকলে Supabase প্রোফাইল (loadMe থেকে)
+      if (p){
+        d = Object.assign({}, d || {});
+        ['name', 'faculty', 'batch', 'bio'].forEach(k => { if (p[k]) d[k] = p[k]; });
+        if (!d.pic && p.avatar_url) d.pic = p.avatar_url;
+      }
+      return d;
     }
     function saveProfile(){
       const data = {
@@ -5916,7 +5945,7 @@
     bioEl.addEventListener('input', () => { bioCount.textContent = bnDigits(bioEl.value.length); });
 
     // লেখকের তথ্যের যেকোনো ফিল্ড বদলালে সংরক্ষণ
-    [nameEl, batchEl, bioEl].forEach(el => el.addEventListener('input', saveProfile));
+    [nameEl, facultyEl, batchEl, bioEl].forEach(el => el.addEventListener('input', saveProfile));
     facultyEl.addEventListener('change', saveProfile);
 
     // ---- লেখার ধরন (genre chips) ----
@@ -6041,33 +6070,96 @@
     ['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag'); }));
     dropZone.addEventListener('drop', e => acceptFiles(e.dataTransfer.files));
 
-    // ---- ফর্ম সাবমিট ----
-    form.addEventListener('submit', e => {
+    // ---- ফর্ম সাবমিট (Supabase: প্রোফাইল, ছবি, ফাইল, লেখা) ----
+    const msgBox = page.querySelector('[data-msg]');
+    const say = (type, text) => { msgBox.className = type ? 'form-msg show ' + type : 'form-msg'; msgBox.textContent = text || ''; };
+    const MIME_BY_EXT = { pdf: 'application/pdf', txt: 'text/plain', doc: 'application/msword', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+
+    // এডিটরের লেখা সাধারণ টেক্সটে: অনুচ্ছেদ ফাঁকা লাইন দিয়ে আলাদা, উদ্ধৃতি "…" চিহ্নে (পাঠ পেজ এটাই চেনে)
+    function editorToText(){
+      const blocks = [];
+      const push = t => { t = String(t || '').replace(/\u00a0/g, ' ').trim(); if (t) blocks.push(t); };
+      editor.childNodes.forEach(n => {
+        if (n.nodeType === 3){ push(n.textContent); return; }
+        if (n.nodeType !== 1) return;
+        const tag = n.tagName;
+        if (tag === 'UL' || tag === 'OL'){ n.querySelectorAll('li').forEach(li => push('• ' + li.innerText)); return; }
+        if (tag === 'BLOCKQUOTE'){ const t = n.innerText.trim(); if (t) push('"' + t + '"'); return; }
+        push(n.innerText || n.textContent);
+      });
+      return blocks.join('\n\n');
+    }
+
+    form.addEventListener('submit', async e => {
       e.preventDefault();
+      say('', '');
       const name = document.getElementById('jomaName').value.trim();
-      const faculty = document.getElementById('jomaFaculty').value;
+      const faculty = document.getElementById('jomaFaculty').value.trim();
       const batch = document.getElementById('jomaBatch').value.trim();
       const title = document.getElementById('jomaTitleInput').value.trim();
+      const bio = document.getElementById('jomaBio').value.trim();
       if (!name || !faculty || !batch){
-        document.getElementById('jomaName').focus();
+        say('err', 'লেখকের নাম, ফ্যাকাল্টি ও ব্যাচ দিন।');
+        (!name ? document.getElementById('jomaName') : !faculty ? document.getElementById('jomaFaculty') : document.getElementById('jomaBatch')).focus();
         return;
       }
-      if (!title){
-        document.getElementById('jomaTitleInput').focus();
+      if (!title){ say('err', 'লেখার শিরোনাম দিন।'); document.getElementById('jomaTitleInput').focus(); return; }
+      if (title.length > 200){ say('err', 'শিরোনাম ২০০ অক্ষরের মধ্যে রাখুন।'); return; }
+      const bodyText = editorToText();
+      if (!bodyText && !uploadedFiles.length){ say('err', 'লেখা লিখুন অথবা ফাইল যুক্ত করুন।'); editor.focus(); return; }
+      if (bodyText.length > 100000){ say('err', 'লেখাটি অনেক বড়, ফাইল হিসেবে আপলোড করুন।'); return; }
+      if (!window.sb){ say('err', 'Supabase এখনো সংযুক্ত নয়।'); return; }
+
+      const { data: sess } = await sb.auth.getSession();
+      const user = sess.session && sess.session.user;
+      if (!user){
+        say('err', 'লেখা জমা দিতে আগে লগইন করুন। আপনার লেখা এখানেই থাকবে।');
+        if (window.openModal) window.openModal('loginModal');
         return;
       }
-      // ব্যাকএন্ডে পাঠানোর ডেটা: pic = কম্প্রেসড WebP ফাইল (বা null), bio = লেখকের বায়োডাটা
-      const payload = {
-        name: name, faculty: faculty, batch: batch,
-        bio: document.getElementById('jomaBio').value.trim(),
-        pic: picFile, genre: genre, title: title,
-        bodyHtml: editor.innerHTML, files: uploadedFiles
-      };
-      void payload;
-      saveProfile();
-      form.style.display = 'none';
-      successBox.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      const btn = form.querySelector('button[type=submit]');
+      btn.disabled = true;
+      try {
+        // ১) লেখক প্রোফাইল (ছবি আপলোডসহ)
+        const upd = { name: name, faculty: faculty, batch: batch, bio: bio };
+        if (picFile){
+          const path = user.id + '/profile.webp';
+          const up = await sb.storage.from('avatars').upload(path, picFile, { upsert: true, contentType: picFile.type || 'image/webp' });
+          if (!up.error) upd.avatar_url = sb.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
+        }
+        const pr = await sb.from('profiles').update(upd).eq('id', user.id);
+        if (pr.error) throw pr.error;
+        window.__pbProfile = Object.assign({}, window.__pbProfile || {}, upd);
+
+        // ২) ফাইল (প্রাইভেট বাকেট, নিজের ফোল্ডারে)
+        const paths = [];
+        for (let i = 0; i < uploadedFiles.length; i++){
+          const f = uploadedFiles[i];
+          const ext = ((f.name.match(/\.([A-Za-z0-9]+)$/) || [])[1] || '').toLowerCase();
+          const path = user.id + '/' + Date.now() + '-' + i + (ext ? '.' + ext : '');
+          const up = await sb.storage.from('submissions').upload(path, f, { contentType: f.type || MIME_BY_EXT[ext] || 'application/octet-stream' });
+          if (up.error) throw up.error;
+          paths.push(path);
+        }
+
+        // ৩) লেখা জমা (অনুমোদন পর্যন্ত pending)
+        const ins = await sb.from('submissions').insert({
+          title: title, genre: genre, body_text: bodyText || '(লেখাটি সংযুক্ত ফাইলে)', file_paths: paths
+        });
+        if (ins.error) throw ins.error;
+
+        saveProfile();
+        form.style.display = 'none';
+        successBox.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        console.error('submission failed', err);
+        say('err', 'লেখা জমা দেওয়া যায়নি। আবার চেষ্টা করুন।');
+      } finally {
+        btn.disabled = false;
+      }
     });
 
     // পেজ নতুন করে খোলার সময় রিসেট (হ্যাশ দিয়ে আবার #lekha-joma এ এলে)
@@ -6094,6 +6186,34 @@
 
     // পেজ প্রথমবার লোড হলেই সংরক্ষিত তথ্য বসানো
     applyProfile();
+    window.addEventListener('pb-profile', applyProfile);   // লগইনের পর ডাটাবেজের প্রোফাইল বসানো
+  })();
+
+  // ---------- যোগাযোগ ফর্ম -> contact_messages ----------
+  (function(){
+    const btn = document.getElementById('contactSendBtn');
+    const box = document.getElementById('contactMsg');
+    if (!btn || !box) return;
+    const say = (type, text) => { box.className = type ? 'form-msg show ' + type : 'form-msg'; box.textContent = text || ''; };
+    btn.addEventListener('click', async () => {
+      const name = document.getElementById('contactName').value.trim();
+      const email = document.getElementById('contactEmail').value.trim();
+      const message = document.getElementById('contactMessage').value.trim();
+      if (!name){ say('err', 'আপনার নাম লিখুন।'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ say('err', 'সঠিক ইমেইল ঠিকানা দিন।'); return; }
+      if (!message){ say('err', 'বার্তা লিখুন।'); return; }
+      if (name.length > 100 || message.length > 3000){ say('err', 'নাম বা বার্তা অনেক বড়।'); return; }
+      if (!window.sb){ say('err', 'Supabase এখনো সংযুক্ত নয়।'); return; }
+      btn.disabled = true;
+      const { error } = await sb.from('contact_messages').insert({ name: name, email: email, message: message });
+      btn.disabled = false;
+      if (error){
+        say('err', /অনেক বেশি বার্তা/.test(error.message || '') ? 'অনেক বেশি বার্তা পাঠানো হয়েছে, কিছুক্ষণ পরে চেষ্টা করুন।' : 'বার্তা পাঠানো যায়নি। আবার চেষ্টা করুন।');
+        return;
+      }
+      say('ok', 'ধন্যবাদ! আপনার বার্তা পাঠানো হয়েছে।');
+      ['contactName', 'contactEmail', 'contactMessage'].forEach(id => { document.getElementById(id).value = ''; });
+    });
   })();
 
   // ---------- Single-page router ----------
@@ -6278,7 +6398,210 @@
       }
     };
 
-    if (window.__lekhaSetAuthors) window.__lekhaSetAuthors(ARTICLES);
+    // ==================================================================
+    // Supabase থেকে সব পাঠযোগ্য কনটেন্ট লোড। সংযোগ না থাকলে বা ব্যর্থ হলে
+    // নিচের হার্ডকোড ডেটা ও স্ট্যাটিক কার্ডই থাকে।
+    // ==================================================================
+    (async function boot(){
+      await Promise.resolve();   // IIFE-র বাকি অংশ (ফাংশন/const) তৈরি হওয়া পর্যন্ত অপেক্ষা
+
+      const pub = (bucket, path) => path ? sb.storage.from(bucket).getPublicUrl(path).data.publicUrl : '';
+      const cssUrl = u => "url('" + String(u).replace(/["'()\s\\]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')) + "')";
+      const BN_TZ = 'Asia/Dhaka';
+      const bnDay  = d => new Intl.DateTimeFormat('bn-BD', { timeZone: BN_TZ, day: '2-digit' }).format(d);
+      const bnMon  = d => new Intl.DateTimeFormat('bn-BD', { timeZone: BN_TZ, month: 'long' }).format(d);
+      const bnMonYear = d => new Intl.DateTimeFormat('bn-BD', { timeZone: BN_TZ, month: 'long', year: 'numeric' }).format(d);
+      function bnTime(d){
+        const p = new Intl.DateTimeFormat('en-GB', { timeZone: BN_TZ, hour: 'numeric', minute: '2-digit', hour12: false }).formatToParts(d);
+        const h = +p.find(x => x.type === 'hour').value % 24, m = p.find(x => x.type === 'minute').value;
+        if (h === 0 && m === '00') return 'সারাদিনব্যাপী';
+        const period = h < 5 ? 'ভোর' : h < 12 ? 'সকাল' : h < 16 ? 'দুপুর' : h < 18 ? 'বিকাল' : h < 20 ? 'সন্ধ্যা' : 'রাত';
+        const h12 = h % 12 === 0 ? 12 : h % 12;
+        return period + ' ' + toBnLocal(h12) + ':' + toBnLocal(m);
+      }
+      const emptyHtml = '<div class="empty-note show" style="grid-column:1/-1;">এখনো কিছু যোগ করা হয়নি।</div>';
+      const setGrid = (grid, html, keepSel) => {
+        if (!grid) return;
+        Array.from(grid.children).forEach(ch => { if (!(keepSel && ch.matches(keepSel))) ch.remove(); });
+        grid.insertAdjacentHTML('afterbegin', html);
+      };
+
+      function articleCard(k, a, cls){
+        const { minutes } = wordsToReadTime(a.body);
+        return '<div class="write-card ' + cls + '" data-cat="' + escapeHtml(a.cat) + '" data-article="' + escapeHtml(k) + '" tabindex="0" role="button">' +
+          '<span class="tag">' + escapeHtml(a.cat) + '</span>' +
+          '<h3>' + escapeHtml(a.title) + '</h3>' +
+          '<p>' + escapeHtml(articleExcerpt(a)) + '</p>' +
+          '<div class="meta"><div class="author"><span class="avatar">' + escapeHtml((a.author || '?').charAt(0)) + '</span>' +
+          '<div class="author-info"><span class="author-name">' + escapeHtml(a.author) + '</span>' +
+          '<span class="author-sub">' + escapeHtml(a.authorSub || '') + '</span></div></div>' +
+          '<span class="read-time">' + toBnLocal(minutes) + ' মিনিট পঠন</span></div></div>';
+      }
+      function magCard(r, cls){
+        const cover = r.cover_path ? pub('covers', r.cover_path) : '';
+        const label = r.issue_no != null ? 'সংখ্যা ' + toBnLocal(r.issue_no) : '';
+        const when = r.published_on ? bnMonYear(new Date(r.published_on + 'T00:00:00')) : '';
+        const dl = r.pdf_path
+          ? '<a class="dl" data-issue="' + escapeHtml(r.id) + '" href="' + escapeHtml(pub('magazine-pdfs', r.pdf_path)) + '" target="_blank" rel="noopener" style="text-decoration:none;"><i data-lucide="download" width="14" height="14"></i> ডাউনলোড করুন</a>'
+          : '';
+        return '<div class="mag-card ' + cls + '">' +
+          '<div class="mag-cover"' + (cover ? ' style="background:' + cssUrl(cover) + ' center/cover no-repeat;"' : '') + '>' +
+          '<i data-lucide="bookmark" width="18" height="18" class="corner"></i>' + (cover ? '' : '<span>' + escapeHtml(label) + '</span>') + '</div>' +
+          '<div class="mag-info"><h4>' + escapeHtml(r.title) + '</h4><span>' + escapeHtml(when) + '</span>' + dl + '</div></div>';
+      }
+      function eventItem(r, cls){
+        const d = r.starts_at ? new Date(r.starts_at) : null;
+        return '<div class="tl-item ' + cls + '"><div class="tl-dot"></div><div class="tl-card">' +
+          (d ? '<div class="tl-date"><b>' + escapeHtml(bnDay(d)) + '</b><span>' + escapeHtml(bnMon(d)) + '</span></div>' : '') +
+          '<div class="tl-body"><h4>' + escapeHtml(r.title) + '</h4>' +
+          (r.description ? '<p>' + escapeHtml(r.description) + '</p>' : '') +
+          '<div class="tl-meta">' +
+          (r.location ? '<span><i data-lucide="map-pin" width="14" height="14"></i> ' + escapeHtml(r.location) + '</span>' : '') +
+          (d ? '<span><i data-lucide="clock" width="14" height="14"></i> ' + escapeHtml(bnTime(d)) + '</span>' : '') +
+          '</div></div></div></div>';
+      }
+      function galleryItem(r, cls){
+        return '<div class="g-item ' + cls + '" style="background:' + cssUrl(pub('gallery', r.image_path)) + ' center/cover no-repeat;">' +
+          (r.caption ? '<span class="g-label"><i data-lucide="image" width="14" height="14"></i> ' + escapeHtml(r.caption) + '</span>' : '') + '</div>';
+      }
+
+      let pages = {};
+      if (window.sb) {
+        try {
+          const q = (t, cols) => sb.from(t).select(cols);
+          const [rA, rI, rE, rG, rS, rC, rV, rP] = await Promise.all([
+            q('articles', 'id,legacy_id,slug,title,genre,tags,body,author_name,author_sub,author_bio,published_at').eq('status', 'published').order('published_at', { ascending: false }),
+            q('magazine_issues', 'id,issue_no,title,cover_path,pdf_path,published_on').eq('published', true).order('published_on', { ascending: false, nullsFirst: false }),
+            q('events', 'id,title,description,starts_at,location').eq('published', true).order('starts_at', { ascending: false, nullsFirst: false }),
+            q('gallery_items', 'id,caption,image_path').eq('published', true).order('sort_order').order('created_at', { ascending: false }),
+            q('site_settings', 'key,value'),
+            q('site_content', 'key,value'),
+            q('site_values', 'title,description').order('sort_order').order('id'),
+            q('pages', 'slug,title,body')
+          ]);
+
+          // --- লেখা ---
+          if (!rA.error && rA.data) {
+            Object.keys(ARTICLES).forEach(k => delete ARTICLES[k]);
+            rA.data.forEach(r => {
+              const key = r.legacy_id != null ? String(r.legacy_id) : r.slug;   // পুরনো #read/1 লিংক চালু থাকে
+              ARTICLES[key] = {
+                uuid: r.id, cat: r.genre || '', title: r.title,
+                author: r.author_name || '', authorSub: r.author_sub || '',
+                date: r.published_at ? new Date(r.published_at + 'T00:00:00').toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }) : '',
+                tags: r.tags || [], bio: r.author_bio || '',
+                body: Array.isArray(r.body) ? r.body : []
+              };
+            });
+            const keys = Object.keys(ARTICLES);
+            setGrid(document.getElementById('cardGrid'), keys.slice(0, 6).map(k => articleCard(k, ARTICLES[k], 'reveal in')).join(''), '#emptyNote');
+            setGrid(document.getElementById('lekhaCardGrid'), keys.map(k => articleCard(k, ARTICLES[k], 'reveal item in')).join(''), '#lekhaEmptyNote');
+          }
+          // --- পত্রিকা ---
+          if (!rI.error && rI.data) {
+            const html = c => rI.data.length ? rI.data.map(r => magCard(r, c)).join('') : emptyHtml;
+            setGrid(document.querySelector('#magazine .mag-grid'), rI.data.length ? rI.data.slice(0, 4).map(r => magCard(r, 'reveal in')).join('') : emptyHtml);
+            setGrid(document.getElementById('magGrid'), html('reveal item in'));
+          }
+          // --- অনুষ্ঠান: হোমে ৩টি (আগে আসন্ন, তারপর সাম্প্রতিক) ---
+          if (!rE.error && rE.data) {
+            const now = Date.now();
+            const up = rE.data.filter(r => r.starts_at && new Date(r.starts_at) >= now).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+            const past = rE.data.filter(r => !r.starts_at || new Date(r.starts_at) < now);
+            const home = up.concat(past).slice(0, 3);
+            setGrid(document.querySelector('#events .timeline'), home.length ? home.map(r => eventItem(r, 'reveal in')).join('') : emptyHtml);
+            setGrid(document.getElementById('eventList'), rE.data.length ? rE.data.map(r => eventItem(r, 'reveal item in')).join('') : emptyHtml);
+          }
+          // --- গ্যালারি ---
+          if (!rG.error && rG.data) {
+            setGrid(document.querySelector('#gallery .gallery-grid'), rG.data.length ? rG.data.slice(0, 6).map(r => galleryItem(r, 'reveal in')).join('') : emptyHtml);
+            setGrid(document.getElementById('galleryGrid'), rG.data.length ? rG.data.map(r => galleryItem(r, 'reveal item in')).join('') : emptyHtml);
+          }
+
+          // --- সাইট সেটিংস: ফুটার ও যোগাযোগ ---
+          const set = {}; (rS.data || []).forEach(r => { set[r.key] = r.value; });
+          const putText = (id, v) => { const el = document.getElementById(id); if (el && v) el.textContent = v; };
+          const hideIfEmpty = (id, v, parentSel) => { const el = document.getElementById(id); if (el && !v) (parentSel ? el.closest(parentSel) : el).style.display = 'none'; };
+          if (!rS.error) {
+            putText('ftSlogan', set.footer_slogan);
+            putText('ftEmail', set.contact_email); putText('ftPhone', set.contact_phone); putText('ftAddress', set.address);
+            const fb = document.getElementById('ftFb'); if (fb) { if (/^https?:\/\//.test(set.facebook_url || '')) { fb.href = set.facebook_url; fb.target = '_blank'; fb.rel = 'noopener'; } else fb.style.display = 'none'; }
+            const tel = document.getElementById('ftTel'); if (tel) { if (set.contact_phone) tel.href = 'tel:' + String(set.contact_phone).replace(/[^\d+]/g, ''); else tel.style.display = 'none'; }
+            const ml = document.getElementById('ftMail'); if (ml && set.contact_email) ml.href = 'mailto:' + set.contact_email;
+            hideIfEmpty('ftPhone', set.contact_phone, 'li'); hideIfEmpty('ftAddress', set.address, 'li');
+          }
+
+          // --- হোমপেজ টেক্সট: হিরো স্ট্যাটস ও "আমাদের সম্পর্কে" ---
+          const content = {}; (rC.data || []).forEach(r => { content[r.key] = r.value; });
+          if (content.hero_stats) {
+            const els = document.querySelectorAll('.hero-stats .stat b');
+            ['members', 'issues', 'years'].forEach((k, i) => { if (els[i] && content.hero_stats[k]) els[i].textContent = content.hero_stats[k]; });
+          }
+          if (content.about) {
+            const h = document.querySelector('#about h2'); if (h && content.about.title) h.textContent = content.about.title;
+            const box = document.querySelector('#about .about-text');
+            if (box && Array.isArray(content.about.paragraphs) && content.about.paragraphs.length) {
+              box.innerHTML = content.about.paragraphs.map(p => '<p>' + escapeHtml(p) + '</p>').join('');
+            }
+          }
+          if (!rV.error && rV.data && rV.data.length) {
+            const icons = ['pen-line', 'users', 'bookmark', 'mic'];
+            const list = document.querySelector('#about .value-list');
+            if (list) list.innerHTML = rV.data.map((r, i) =>
+              '<div class="value-item"><div class="ico"><i data-lucide="' + icons[i % icons.length] + '" width="18" height="18"></i></div>' +
+              '<div><h4>' + escapeHtml(r.title) + '</h4>' + (r.description ? '<p>' + escapeHtml(r.description) + '</p>' : '') + '</div></div>').join('');
+          }
+          (rP.data || []).forEach(r => { pages[r.slug] = r; });
+        } catch (err) { console.error('Supabase content load failed, using static content', err); }
+      }
+
+      // ফিল্টার/পেজিনেশন এখন চালু (স্ট্যাটিক বা লোড-করা কার্ডের ওপর)
+      if (window.__initHomeFilter) window.__initHomeFilter();
+      if (window.__initLekha) window.__initLekha();
+      if (window.__initSimplePaginations) window.__initSimplePaginations();
+      if (window.__lekhaSetAuthors) window.__lekhaSetAuthors(ARTICLES);
+      renderIcons();
+      try { await loadMe(); } catch (err) { console.error('loadMe failed', err); }
+      if ((location.hash || '').indexOf('#read/') === 0 && window.openReadingArticle) window.openReadingArticle(location.hash.slice(6));
+
+      // ডাউনলোড গণনা (ব্যর্থ হলেও ডাউনলোড আটকাবে না)
+      document.addEventListener('click', e => {
+        const a = e.target.closest && e.target.closest('a.dl[data-issue]');
+        if (a && window.sb) sb.rpc('increment_download', { issue: a.dataset.issue }).then(() => {}, () => {});
+      });
+
+      // ফুটারের পেজ (নিয়মাবলী / নির্দেশিকা / FAQ): সাধারণ টেক্সট, HTML নয়
+      document.addEventListener('click', async e => {
+        const a = e.target.closest && e.target.closest('a[data-page]');
+        if (!a) return;
+        e.preventDefault();
+        let pg = pages[a.dataset.page];
+        if (!pg && window.sb) {
+          const { data } = await sb.from('pages').select('slug,title,body').eq('slug', a.dataset.page).maybeSingle();
+          if (data) pg = pages[data.slug] = data;
+        }
+        const title = pg ? pg.title : a.textContent.trim();
+        const paras = pg && pg.body ? pg.body.split(/\n{2,}/) : ['শীঘ্রই যুক্ত করা হবে।'];
+        const old = document.getElementById('pbPageOverlay'); if (old) old.remove();
+        const ov = document.createElement('div');
+        ov.id = 'pbPageOverlay';
+        ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+        ov.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(36,20,14,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--paper-card,#fff);color:var(--ink,#222);max-width:640px;width:100%;max-height:85vh;overflow:auto;border-radius:10px;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,.3);';
+        const h = document.createElement('h3'); h.textContent = title; h.style.cssText = 'margin:0 0 14px;font-size:1.3rem;';
+        card.appendChild(h);
+        paras.forEach(t => { const p = document.createElement('p'); p.textContent = t; p.style.cssText = 'margin:0 0 12px;line-height:1.8;white-space:pre-line;'; card.appendChild(p); });
+        const x = document.createElement('button'); x.type = 'button'; x.textContent = 'বন্ধ করুন';
+        x.style.cssText = 'margin-top:8px;padding:9px 18px;border:none;border-radius:6px;background:var(--maroon,#7a1f2b);color:#fff;cursor:pointer;font:inherit;';
+        const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+        const onKey = ev => { if (ev.key === 'Escape') close(); };
+        x.addEventListener('click', close);
+        ov.addEventListener('click', ev => { if (ev.target === ov) close(); });
+        document.addEventListener('keydown', onKey);
+        card.appendChild(x); ov.appendChild(card); document.body.appendChild(ov);
+      });
+    })();
 
     const CAT_ICON = { 'কবিতা':'feather', 'গল্প':'book-open', 'প্রবন্ধ':'file-text', 'অনুবাদ':'languages' };
 
@@ -6331,17 +6654,22 @@
 
       const bodyEl = document.getElementById('readBody');
       bodyEl.innerHTML = article.body.map(p => {
-        if (p.startsWith('"') || p.startsWith('"')) return `<blockquote>${p}</blockquote>`;
-        return `<p>${p}</p>`;
+        if (p.startsWith('"') || p.startsWith('"')) return `<blockquote>${escapeHtml(p)}</blockquote>`;
+        return `<p>${escapeHtml(p)}</p>`;
       }).join('');
 
-      document.getElementById('readTags').innerHTML = article.tags.map(t => `<span>#${t}</span>`).join('');
+      document.getElementById('readTags').innerHTML = article.tags.map(t => `<span>#${escapeHtml(t)}</span>`).join('');
 
       // Bookmark / like state from localStorage
       syncEngagement(id);
+      if (dbMode(id)){
+        loadLikeCount(id).then(() => syncEngagement(id));
+        if (!viewedThisSession.has(String(id))){ viewedThisSession.add(String(id)); sb.rpc('record_view', { aid: uuidOf(id) }).then(() => {}, () => {}); }
+      }
 
       // Comments for this article
       renderComments(id);
+      if (dbMode(id)) refreshComments(id);
 
       renderIcons();
       readingPage.scrollTop = 0;
@@ -6349,20 +6677,176 @@
       updateProgress();
     }
 
+    // ==================================================================
+    // Supabase ডেটা লেয়ার: লাইক, বুকমার্ক, মন্তব্য, রিডিং সেটিংস।
+    // article-এ uuid থাকলে (অর্থাৎ ডাটাবেজ থেকে এলে) Supabase, নইলে আগের localStorage।
+    // ==================================================================
+    const DB = { likes: new Set(), likeCount: {}, commentLikes: new Set(), comments: {}, para: {} };
+    let ME = null;            // { id, name, isAdmin }
+    let settingsTimer = null;
+    const viewedThisSession = new Set();
+    const uuidOf = key => (ARTICLES[String(key)] || {}).uuid;
+    const dbMode = key => !!(window.sb && uuidOf(key));
+    function needLogin(key){
+      if (dbMode(key) && !ME){
+        if (window.openModal) window.openModal('loginModal');
+        return true;
+      }
+      return false;
+    }
+    window.__pbNeedLogin = needLogin;
+
+    async function loadLikeCount(key){
+      const aid = uuidOf(key); if (!aid) return;
+      const { data } = await sb.from('article_like_counts').select('likes').eq('article_id', aid).maybeSingle();
+      DB.likeCount[aid] = data ? data.likes : 0;
+    }
+
+    async function fetchComments(key){
+      const aid = uuidOf(key); if (!aid) return;
+      const { data, error } = await sb.from('comments_view')
+        .select('id,parent_id,user_id,body,created_at,edited_at,author_name')
+        .eq('article_id', aid).order('created_at', { ascending: true });
+      if (error || !data) return;
+      const counts = {};
+      if (data.length){
+        const r2 = await sb.from('comment_like_counts').select('comment_id,likes').in('comment_id', data.map(r => r.id));
+        (r2.data || []).forEach(x => { counts[x.comment_id] = x.likes; });
+      }
+      // likeCount-এ নিজের লাইক বাদ দেওয়া হয়, কারণ দেখানোর সময় liked হলে +১ যোগ হয়
+      const mk = r => ({
+        id: r.id, userId: r.user_id, name: r.author_name || 'সদস্য', text: r.body,
+        time: new Date(r.created_at).getTime(), edited: !!r.edited_at,
+        likeCount: Math.max(0, (counts[r.id] || 0) - (DB.commentLikes.has(r.id) ? 1 : 0)), replies: []
+      });
+      const top = [], byId = {};
+      data.forEach(r => { if (!r.parent_id){ const c = mk(r); byId[r.id] = c; top.push(c); } });
+      data.forEach(r => { if (r.parent_id && byId[r.parent_id]) byId[r.parent_id].replies.push(mk(r)); });
+      DB.comments[String(key)] = top;
+    }
+    async function refreshComments(key){
+      await fetchComments(key);
+      if (String(readingPage.dataset.currentId) === String(key)) renderComments(key);
+    }
+
+    async function remotePost(key, text, parentId){
+      if (needLogin(key)) return;
+      const row = { article_id: uuidOf(key), body: text };
+      if (parentId) row.parent_id = parentId;
+      const { error } = await sb.from('comments').insert(row);
+      if (error) alert('মন্তব্য পাঠানো যায়নি। আবার চেষ্টা করুন।');
+      await refreshComments(key);
+    }
+    async function remoteEdit(key, cid, text){
+      const { error } = await sb.from('comments').update({ body: text, edited_at: new Date().toISOString() }).eq('id', cid);
+      if (error) alert('মন্তব্য সম্পাদনা করা যায়নি।');
+      await refreshComments(key);
+    }
+    async function remoteDelete(key, cid){
+      const { error } = await sb.from('comments').delete().eq('id', cid);
+      if (error) alert('মন্তব্য মোছা যায়নি।');
+      await refreshComments(key);
+    }
+    async function remoteToggleCommentLike(cid){
+      const key = String(readingPage.dataset.currentId);
+      if (needLogin(key)) return;
+      if (DB.commentLikes.has(cid)){
+        DB.commentLikes.delete(cid); renderComments(key);
+        await sb.from('comment_likes').delete().eq('comment_id', cid).eq('user_id', ME.id);
+      } else {
+        DB.commentLikes.add(cid); renderComments(key);
+        await sb.from('comment_likes').insert({ comment_id: cid });
+      }
+      await refreshComments(key);
+    }
+
+    // অনুচ্ছেদ বুকমার্ক মডিউলের জন্য হুক (নিচের আলাদা IIFE এগুলো ব্যবহার করে)
+    window.__pbParaLoad = function(){
+      let out = {};
+      try { out = JSON.parse(localStorage.getItem('parivartan_para_bookmarks') || '{}') || {}; } catch (e) { out = {}; }
+      if (!window.sb) return out;
+      Object.keys(ARTICLES).forEach(k => {
+        const aid = ARTICLES[k].uuid; if (!aid) return;
+        delete out[k];
+        if (ME && DB.para[aid] != null) out[k] = { p: DB.para[aid], s: undefined, t: 0 };
+      });
+      return out;
+    };
+    window.__pbParaSync = function(key, bm){
+      const aid = uuidOf(key); if (!aid || !ME) return;
+      if (bm) DB.para[aid] = bm.p; else delete DB.para[aid];
+      (async () => {
+        await sb.from('paragraph_bookmarks').delete().eq('article_id', aid).eq('user_id', ME.id);
+        if (bm) await sb.from('paragraph_bookmarks').insert({ article_id: aid, paragraph_index: bm.p });
+      })().catch(() => {});
+    };
+
+    function refreshReadingUI(){
+      const key = readingPage.dataset.currentId;
+      if (readingPage.classList.contains('is-active') && key){
+        syncEngagement(key);
+        if (dbMode(key)) refreshComments(key);
+      }
+      updateComposerAvatar();
+      if (window.__pbParaRefresh) window.__pbParaRefresh();
+    }
+
+    // লগইন অবস্থা ও ব্যক্তিগত ডেটা লোড
+    async function loadMe(){
+      if (!window.sb) return;
+      let session = null;
+      try { session = (await sb.auth.getSession()).data.session; } catch (e) {}
+      if (!session){
+        ME = null; DB.likes = new Set(); DB.commentLikes = new Set(); DB.para = {};
+        CURRENT_USER.name = 'পাঠক সদস্য';
+        window.__pbProfile = null;
+        refreshReadingUI();
+        return;
+      }
+      const uid = session.user.id;
+      const [p, l, cl, pb] = await Promise.all([
+        sb.from('profiles').select('name,faculty,batch,bio,avatar_url,role,reading_settings').eq('id', uid).maybeSingle(),
+        sb.from('article_likes').select('article_id').eq('user_id', uid),
+        sb.from('comment_likes').select('comment_id').eq('user_id', uid),
+        sb.from('paragraph_bookmarks').select('article_id,paragraph_index').eq('user_id', uid)
+      ]);
+      const prof = p.data || {};
+      const wasId = ME && ME.id;
+      ME = { id: uid, name: prof.name || (session.user.email || '').split('@')[0] || 'সদস্য', isAdmin: prof.role === 'admin' };
+      CURRENT_USER.name = ME.name;
+      window.__pbProfile = { name: prof.name, faculty: prof.faculty, batch: prof.batch, bio: prof.bio, avatar_url: prof.avatar_url };
+      if (wasId !== uid) setTimeout(() => window.dispatchEvent(new CustomEvent('pb-profile')), 0);
+      DB.likes = new Set((l.data || []).map(r => r.article_id));
+      DB.commentLikes = new Set((cl.data || []).map(r => r.comment_id));
+      DB.para = {}; (pb.data || []).forEach(r => { DB.para[r.article_id] = r.paragraph_index; });
+      // রিডিং সেটিংস: প্রোফাইলে থাকলে সেটি, না থাকলে এই ডিভাইসের সেটিং প্রোফাইলে পাঠানো
+      const rs = prof.reading_settings;
+      if (rs && Object.keys(rs).length){
+        settings = Object.assign({}, DEFAULTS, rs);
+        try { localStorage.setItem('parivartan_read_settings', JSON.stringify(settings)); } catch (e) {}
+        applySettings();
+      } else {
+        sb.from('profiles').update({ reading_settings: settings }).eq('id', uid).then(() => {}, () => {});
+      }
+      refreshReadingUI();
+    }
+    window.addEventListener('pb-auth', loadMe);
+    window.__pbLoadMe = loadMe;
+
     function syncEngagement(id){
-      const bookmarks = JSON.parse(localStorage.getItem('parivartan_bookmarks') || '[]');
-      const likes = JSON.parse(localStorage.getItem('parivartan_likes') || '[]');
+      const key = String(id), db = dbMode(key), aid = uuidOf(key);
+      const bookmarks = db ? [] : JSON.parse(localStorage.getItem('parivartan_bookmarks') || '[]');
+      const likes = db ? [] : JSON.parse(localStorage.getItem('parivartan_likes') || '[]');
       const bmBtn = document.getElementById('readBookmarkBtn');
       const likeBtn = document.getElementById('readLikeBtn');
       const likeCountEl = document.getElementById('readLikeCount');
       const isBookmarked = bookmarks.includes(Number(id));
-      const isLiked = likes.includes(Number(id));
+      const isLiked = db ? DB.likes.has(aid) : likes.includes(Number(id));
       bmBtn.classList.toggle('is-active', isBookmarked);
       bmBtn.querySelector('i')?.setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
       likeBtn.classList.toggle('is-active', isLiked);
       likeBtn.querySelector('i')?.setAttribute('fill', isLiked ? 'currentColor' : 'none');
-      const base = 124;
-      likeCountEl.textContent = toBnLocal(base + (isLiked ? 1 : 0));
+      likeCountEl.textContent = toBnLocal(db ? (DB.likeCount[aid] || 0) : 124 + (isLiked ? 1 : 0));
       renderIcons();
     }
 
@@ -6391,15 +6875,18 @@
       localStorage.setItem(COMMENTS_KEY, JSON.stringify(all));
     }
     function getCommentsFor(id){
+      if (dbMode(String(id))) return DB.comments[String(id)] || [];
       const all = loadAllComments();
       return all[id] || [];
     }
     function setCommentsFor(id, list){
+      if (dbMode(String(id))){ DB.comments[String(id)] = list; return; }
       const all = loadAllComments();
       all[id] = list;
       saveAllComments(all);
     }
     function getLikedCommentIds(){
+      if (dbMode(String(readingPage.dataset.currentId))) return Array.from(DB.commentLikes);
       try{ return JSON.parse(localStorage.getItem(COMMENT_LIKES_KEY) || '[]'); }
       catch(e){ return []; }
     }
@@ -6431,7 +6918,8 @@
       const liked = getLikedCommentIds().includes(c.id);
       const likeCount = (c.likeCount || 0) + (liked ? 1 : 0);
       const initial = (c.name || 'অ').charAt(0);
-      const isOwn = c.name === CURRENT_USER.name;
+      const isOwn = c.userId ? !!(ME && c.userId === ME.id) : c.name === CURRENT_USER.name;
+      const canDel = isOwn || !!(ME && ME.isAdmin && c.userId);
       return `
         <div class="comment-item" data-comment-id="${c.id}" data-reply="${isReply ? 'true' : 'false'}">
           <div class="c-avatar" style="background:${avatarColor(c.name || 'অ')}">${escapeHtml(initial)}</div>
@@ -6446,11 +6934,11 @@
               <button type="button" class="comment-action-btn ${liked ? 'liked' : ''}" data-action="like-comment" data-id="${c.id}">পছন্দ</button>
               ${!isReply ? `<button type="button" class="comment-action-btn" data-action="reply" data-id="${c.id}">উত্তর দিন</button>` : ''}
               <span class="comment-time">${relativeTime(c.time)}</span>
-              ${isOwn ? `
+              ${canDel ? `
                 <div class="comment-more-wrap" data-more-wrap="${c.id}">
                   <button type="button" class="comment-more-btn" data-action="more" data-id="${c.id}" aria-label="আরও অপশন"><i data-lucide="more-horizontal" width="16" height="16"></i></button>
                   <div class="comment-more-menu" data-more-menu="${c.id}">
-                    <button type="button" class="comment-more-item" data-action="edit" data-id="${c.id}"><i data-lucide="pencil" width="14" height="14"></i> এডিট করুন</button>
+                    ${isOwn ? `<button type="button" class="comment-more-item" data-action="edit" data-id="${c.id}"><i data-lucide="pencil" width="14" height="14"></i> এডিট করুন</button>` : ''}
                     <button type="button" class="comment-more-item danger" data-action="delete" data-id="${c.id}"><i data-lucide="trash-2" width="14" height="14"></i> মুছুন</button>
                   </div>
                 </div>` : ''}
@@ -6501,6 +6989,7 @@
     }
 
     function postComment(articleId, text, name){
+      if (dbMode(String(articleId))){ remotePost(articleId, text, null); return; }
       const list = getCommentsFor(articleId);
       const comment = {
         id: 'c' + Date.now() + Math.random().toString(36).slice(2,7),
@@ -6516,6 +7005,7 @@
     }
 
     function postReply(articleId, parentId, text, name){
+      if (dbMode(String(articleId))){ remotePost(articleId, text, parentId); return; }
       const list = getCommentsFor(articleId);
       const parent = list.find(c => c.id === parentId);
       if (!parent) return;
@@ -6532,6 +7022,7 @@
     }
 
     function toggleCommentLike(commentId){
+      if (dbMode(String(readingPage.dataset.currentId))){ remoteToggleCommentLike(commentId); return; }
       let liked = getLikedCommentIds();
       if (liked.includes(commentId)) liked = liked.filter(x => x !== commentId);
       else liked.push(commentId);
@@ -6541,6 +7032,7 @@
 
     // ---- Edit / delete helpers (search top-level comments and their replies) ----
     function updateCommentText(articleId, commentId, newText){
+      if (dbMode(String(articleId))) remoteEdit(articleId, commentId, newText);
       const list = getCommentsFor(articleId);
       for (const c of list){
         if (c.id === commentId){ c.text = newText; c.edited = true; setCommentsFor(articleId, list); return true; }
@@ -6553,6 +7045,7 @@
       return false;
     }
     function deleteCommentById(articleId, commentId){
+      if (dbMode(String(articleId))) remoteDelete(articleId, commentId);
       let list = getCommentsFor(articleId);
       const beforeLen = list.length;
       list = list.filter(c => c.id !== commentId);
@@ -6579,11 +7072,13 @@
       const sendBtn = document.getElementById('commentSendBtn');
 
       textInput.addEventListener('input', () => { autoGrow(textInput); updateSendBtnState(textInput, sendBtn); });
+      textInput.addEventListener('focus', () => { if (needLogin(readingPage.dataset.currentId)) textInput.blur(); });
 
       function submit(){
         const text = textInput.value.trim();
         if (!text) return;
         const articleId = readingPage.dataset.currentId;
+        if (needLogin(articleId)) return;
         postComment(articleId, text, CURRENT_USER.name);
         textInput.value = '';
         autoGrow(textInput);
@@ -6636,6 +7131,7 @@
 
       const replyBtn = e.target.closest('[data-action="reply"]');
       if (replyBtn){
+        if (needLogin(readingPage.dataset.currentId)) return;
         const commentId = replyBtn.dataset.id;
         const slot = document.querySelector(`[data-reply-slot="${commentId}"]`);
         if (!slot) return;
@@ -6819,8 +7315,22 @@
       localStorage.setItem('parivartan_bookmarks', JSON.stringify(bookmarks));
       syncEngagement(id);
     });
-    document.getElementById('readLikeBtn').addEventListener('click', () => {
-      const id = Number(readingPage.dataset.currentId);
+    document.getElementById('readLikeBtn').addEventListener('click', async () => {
+      const key = String(readingPage.dataset.currentId);
+      if (dbMode(key)){
+        if (needLogin(key)) return;
+        const aid = uuidOf(key);
+        if (DB.likes.has(aid)){
+          DB.likes.delete(aid); DB.likeCount[aid] = Math.max(0, (DB.likeCount[aid] || 0) - 1); syncEngagement(key);
+          await sb.from('article_likes').delete().eq('article_id', aid).eq('user_id', ME.id);
+        } else {
+          DB.likes.add(aid); DB.likeCount[aid] = (DB.likeCount[aid] || 0) + 1; syncEngagement(key);
+          await sb.from('article_likes').insert({ article_id: aid });
+        }
+        await loadLikeCount(key); syncEngagement(key);
+        return;
+      }
+      const id = Number(key);
       let likes = JSON.parse(localStorage.getItem('parivartan_likes') || '[]');
       if (likes.includes(id)) likes = likes.filter(x => x !== id);
       else likes.push(id);
@@ -7016,6 +7526,11 @@
     }
     function saveSettings(){
       localStorage.setItem('parivartan_read_settings', JSON.stringify(settings));
+      if (window.sb && ME){
+        clearTimeout(settingsTimer);
+        const uid = ME.id, snapshot = Object.assign({}, settings);
+        settingsTimer = setTimeout(() => { sb.from('profiles').update({ reading_settings: snapshot }).eq('id', uid).then(() => {}, () => {}); }, 700);
+      }
     }
 
     function applySettings(){
@@ -7182,7 +7697,10 @@
   const ARROW_DOWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
   const toBn = n => String(n).replace(/[0-9]/g, d => '০১২৩৪৫৬৭৮৯'[d]);
 
-  function load(){ try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ return {}; } }
+  function load(){
+    if (window.__pbParaLoad) return window.__pbParaLoad();
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ return {}; }
+  }
   function save(all){ try { localStorage.setItem(KEY, JSON.stringify(all)); } catch(e){} }
   const curId = () => String(readingPage.dataset.currentId || '');
 
@@ -7303,18 +7821,22 @@
   }
 
   function setBookmark(el){
+    if (window.__pbNeedLogin && window.__pbNeedLogin(curId())) return;
     const all = load();
     all[curId()] = { p: Number(el.dataset.pi), s: snip(el), t: Date.now() };
     save(all);
+    if (window.__pbParaSync) window.__pbParaSync(curId(), all[curId()]);
     setMode(false); paintBookmark(); renderBanner(); refreshBadges(); updateFloat(); syncTopBtn();
     say('এখানে বুকমার্ক রাখা হয়েছে');
   }
   function removeBookmark(){
     const all = load(); delete all[curId()]; save(all);
+    if (window.__pbParaSync) window.__pbParaSync(curId(), null);
     setMode(false); paintBookmark(); renderBanner(); refreshBadges(); updateFloat(); syncTopBtn();
     say('বুকমার্ক সরানো হয়েছে');
   }
 
+  window.__pbParaRefresh = function(){ if (readingPage.classList.contains('is-active')) paintBookmark(); renderBanner(); refreshBadges(); updateFloat(); syncTopBtn(); };
   body.addEventListener('click', e => {
     const f = e.target.closest('.bm-flag');
     if (!f) return;
