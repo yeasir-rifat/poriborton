@@ -76,7 +76,7 @@
   <div class="wrap hero-inner">
     <div class="hero-copy">
       <div class="hero-tag"><i data-lucide="feather" width="16" height="16"></i> প্রতিষ্ঠিত ২০১৮ · একটি বাংলা সাহিত্য সংগঠন</div>
-      <h1>সময় এখন বদলে যাবার, সময় এখন নতুন কিছু করার</h1>
+      <h1><span class="hero-line">সময় এসেছে নতুন কিছু করার,</span><span class="hero-line">সময় এবার বদলে যাওয়ার</span></h1>
       <p class="lede">এটি প্লেসহোল্ডার টেক্সট। এখানে ক্লাবের মূল বার্তা থাকবে, লেখালেখি, পাঠচক্র ও সৃজনশীলতার একটি প্রাণবন্ত কমিউনিটি হিসেবে "পরিবর্তন"-এর পরিচয় তুলে ধরা হবে।</p>
       <div class="hero-actions">
         <button type="button" class="btn btn-primary" id="heroJoinBtn" data-open-modal="joinModal"><i data-lucide="user-plus" width="18" height="18"></i> সদস্য হোন</button>
@@ -125,7 +125,7 @@
       <div class="reveal">
         <div class="about-media">
           <div class="frame"></div>
-          <span class="glyph">প</span>
+          <div class="img-placeholder"><i data-lucide="image" width="40" height="40"></i><span>ছবি এখানে বসবে</span></div>
         </div>
       </div>
       <div class="reveal">
@@ -809,7 +809,7 @@
         <div class="adm-panel-body" style="padding:22px;">
           <div class="adm-field">
             <label>মূল শিরোনাম</label>
-            <input type="text" id="heroTitle" value="" placeholder="রঙিন করতে শব্দটি *তারা* চিহ্নের মাঝে লিখুন">
+            <input type="text" id="heroTitle" value="" placeholder="দুই লাইনের জন্য মাঝে | দিন, যেমন: প্রথম লাইন | দ্বিতীয় লাইন। খালি রাখলে ডিফল্ট লেখা থাকবে">
           </div>
           <div class="adm-field">
             <label>বর্ণনা টেক্সট</label>
@@ -2016,7 +2016,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© ২০২৬ পরিবর্তন সাহিত্য ক্লাব। সর্বস্বত্ব সংরক্ষিত।</span>
+      <span>© ২০২৬ পরিবর্তন। সর্বস্বত্ব সংরক্ষিত।</span>
       <span><a href="#admin" style="color:inherit; text-decoration:underline;">এডমিন প্যানেল</a></span>
     </div>
   </div>
@@ -2028,7 +2028,10 @@
 <div class="lightbox-backdrop" id="lightboxBackdrop" aria-hidden="true">
   <div class="lightbox-box">
     <button class="lightbox-close" data-close-modal aria-label="বন্ধ করুন"><i data-lucide="x" width="18" height="18"></i></button>
+    <button class="lightbox-nav lb-prev" data-lb-prev aria-label="আগের ছবি"><i data-lucide="chevron-left" width="22" height="22"></i></button>
+    <button class="lightbox-nav lb-next" data-lb-next aria-label="পরের ছবি"><i data-lucide="chevron-right" width="22" height="22"></i></button>
     <span class="lb-label"></span>
+    <span class="lb-count"></span>
   </div>
 </div>
 
