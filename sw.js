@@ -9,7 +9,7 @@
  *
  * নতুন ভার্সন দিলে নিচের VERSION বাড়ান।
  */
-const VERSION = 'v6';
+const VERSION = 'v7';
 const STATIC_CACHE  = `pb-static-${VERSION}`;
 const RUNTIME_CACHE = `pb-runtime-${VERSION}`;
 const OFFLINE_URL = './offline.html';
