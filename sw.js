@@ -9,7 +9,7 @@
  *
  * নতুন ভার্সন দিলে নিচের VERSION বাড়ান।
  */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE  = `pb-static-${VERSION}`;
 const RUNTIME_CACHE = `pb-runtime-${VERSION}`;
 const OFFLINE_URL = './offline.html';
@@ -30,6 +30,7 @@ const PRECACHE = [
   './js/05-bookmarks.js',
   './js/06-modal-flag.js',
   './js/07-no-zoom.js',
+  './js/08-status-bar.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/favicon-32.png'
