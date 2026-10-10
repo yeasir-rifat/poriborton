@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>অফলাইন — পরিবর্তন</title>
+<meta name="theme-color" content="#6E1F2B">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<style>
+  :root{ --paper:#F6F0E2; --ink:#241B15; --ink-soft:#5A4C3F; --maroon:#6E1F2B; --brass:#A97D35; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Hind Siliguri','Noto Sans Bengali',system-ui,sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    padding:env(safe-area-inset-top,0) 24px env(safe-area-inset-bottom,0);
+    text-align:center; line-height:1.8;
+  }
+  .box{ max-width:420px; }
+  .mark{ width:72px; height:72px; margin:0 auto 24px; border-radius:50%;
+    border:1.5px solid var(--brass); color:var(--brass);
+    display:flex; align-items:center; justify-content:center; font-size:30px; }
+  h1{ font-family:'Kalpurush',serif; font-weight:400; color:var(--maroon); font-size:1.7rem; margin-bottom:12px; }
+  p{ color:var(--ink-soft); margin-bottom:28px; }
+  button{
+    font:inherit; font-weight:600; padding:12px 28px; border:0; border-radius:4px;
+    background:var(--maroon); color:var(--paper); cursor:pointer;
+  }
+</style>
+</head>
+<body>
+  <main class="box">
+    <div class="mark" aria-hidden="true">📖</div>
+    <h1>আপনি অফলাইনে আছেন</h1>
+    <p>ইন্টারনেট সংযোগ নেই। সংযোগ ফিরে এলে আবার চেষ্টা করুন। আগে খোলা লেখাগুলো সংযোগ ছাড়াও পড়া যেতে পারে।</p>
+    <button type="button" onclick="location.reload()">আবার চেষ্টা করুন</button>
+  </main>
+</body>
+</html>
