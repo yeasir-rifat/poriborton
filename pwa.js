@@ -26,22 +26,29 @@
 
   // CSS (ইনজেক্ট করা হচ্ছে যাতে আলাদা ফাইল লাগে না)
   var css = [
-    '.pwa-install{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translate(-50%,140%);',
-    'z-index:950;display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);padding:12px 14px;',
-    'background:#FCF8EE;color:#241B15;border:1px solid rgba(36,27,21,.12);border-radius:6px;',
+    /* ইনস্টল ব্যানার: left/right দিয়ে প্রস্থ নির্ধারণ, তাই ছোট স্ক্রিনেও পুরো প্রস্থ পায় */
+    '.pwa-install{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));',
+    'margin:0 auto;width:auto;max-width:440px;box-sizing:border-box;transform:translateY(170%);',
+    'z-index:950;display:flex;align-items:center;gap:12px;padding:12px 14px;',
+    'background:#FCF8EE;color:#241B15;border:1px solid rgba(36,27,21,.12);border-radius:8px;',
     'box-shadow:0 12px 30px rgba(36,20,14,.18);font-family:"Hind Siliguri","Noto Sans Bengali",sans-serif;',
     'transition:transform .35s ease;}',
-    '.pwa-install.show{transform:translate(-50%,0);}',
-    '.pwa-install img{width:40px;height:40px;border-radius:8px;flex:0 0 auto;}',
-    '.pwa-install .pwa-txt{font-size:.95rem;line-height:1.5;}',
-    '.pwa-install .pwa-txt small{display:block;color:#5A4C3F;font-size:.8rem;}',
-    '.pwa-install button{font:inherit;font-weight:600;border:0;border-radius:4px;padding:8px 14px;cursor:pointer;white-space:nowrap;}',
+    '.pwa-install.show{transform:translateY(0);}',
+    '.pwa-install img{width:44px;height:44px;border-radius:10px;flex:0 0 auto;}',
+    '.pwa-install .pwa-txt{flex:1 1 auto;min-width:0;font-size:.98rem;font-weight:600;line-height:1.4;}',
+    '.pwa-install .pwa-txt small{display:block;margin-top:2px;color:#5A4C3F;font-size:.8rem;font-weight:400;line-height:1.4;}',
+    '.pwa-install button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;white-space:nowrap;flex:0 0 auto;}',
     '.pwa-install .pwa-add{background:#6E1F2B;color:#F6F0E2;}',
-    '.pwa-install .pwa-x{background:transparent;color:#5A4C3F;padding:8px;font-size:1.1rem;line-height:1;}',
-    '.pwa-offline{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translate(-50%,-160%);',
-    'z-index:960;background:#241B15;color:#F6F0E2;padding:8px 16px;border-radius:4px;font-size:.9rem;',
-    'font-family:"Hind Siliguri","Noto Sans Bengali",sans-serif;transition:transform .3s ease;}',
-    '.pwa-offline.show{transform:translate(-50%,0);}'
+    '.pwa-install .pwa-x{background:transparent;color:#5A4C3F;padding:8px 6px;font-size:1.3rem;line-height:1;}',
+    '@media (max-width:360px){.pwa-install{left:10px;right:10px;gap:9px;padding:10px;}',
+    '.pwa-install img{width:38px;height:38px;}.pwa-install .pwa-txt{font-size:.9rem;}',
+    '.pwa-install button{padding:8px 12px;}}',
+    /* অফলাইন নোটিস */
+    '.pwa-offline{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:16px;right:16px;margin:0 auto;',
+    'width:max-content;max-width:calc(100% - 32px);box-sizing:border-box;text-align:center;white-space:nowrap;',
+    'transform:translateY(-200%);z-index:960;background:#241B15;color:#F6F0E2;padding:8px 16px;border-radius:6px;',
+    'font-size:.9rem;font-family:"Hind Siliguri","Noto Sans Bengali",sans-serif;transition:transform .3s ease;}',
+    '.pwa-offline.show{transform:translateY(0);}'
   ].join('');
   var style = document.createElement('style');
   style.textContent = css;
