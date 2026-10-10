@@ -1384,7 +1384,7 @@
           '</div></div></div></div>';
       }
       function galleryItem(r, cls){
-        return '<div class="g-item ' + cls + '" style="background:' + cssUrl(pub('gallery', r.image_path)) + ' center/cover no-repeat;">' +
+        return '<div class="g-item ' + cls + '" tabindex="0" style="background:' + cssUrl(pub('gallery', r.image_path)) + ' center/cover no-repeat;">' +
           (r.caption ? '<span class="g-label"><i data-lucide="image" width="14" height="14"></i> ' + escapeHtml(r.caption) + '</span>' : '') + '</div>';
       }
 
@@ -1445,6 +1445,8 @@
           // --- গ্যালারি ---
           if (!rG.error && rG.data) {
             setGrid(document.querySelector('#gallery .gallery-grid'), rG.data.length ? rG.data.slice(0, 6).map(r => galleryItem(r, 'reveal in')).join('') : emptyHtml);
+            const homeGrid = document.querySelector('#gallery .gallery-grid');
+            if (homeGrid) homeGrid.classList.toggle('is-few', rG.data.length < 6);
             setGrid(document.getElementById('galleryGrid'), rG.data.length ? rG.data.map(r => galleryItem(r, 'reveal item in')).join('') : emptyHtml);
           }
 
@@ -1478,7 +1480,7 @@
           // --- হোমপেজ টেক্সট: হিরো স্ট্যাটস ও "আমাদের সম্পর্কে" ---
           const content = {}; (rC.data || []).forEach(r => { content[r.key] = r.value; });
           const heroC = content.hero || {};
-          if (heroC.title) { const h = document.querySelector('.hero-copy h1'); if (h) h.innerHTML = escapeHtml(heroC.title).replace(/\*(.+?)\*/, '<em>$1</em>'); }
+          if (heroC.title && heroC.title.includes('|')) { const h = document.querySelector('.hero-copy h1'); if (h) h.innerHTML = heroC.title.split('|').map(s => '<span class=\"hero-line\">' + escapeHtml(s.trim()).replace(/\*(.+?)\*/, '<em>$1</em>') + '</span>').join(''); }
           if (heroC.desc) { const l = document.querySelector('.hero-copy .lede'); if (l) l.textContent = heroC.desc; }
           if (content.hero_stats) {
             const els = document.querySelectorAll('.hero-stats .stat b');
@@ -2646,43 +2648,92 @@
   window.addEventListener('hashchange', route);
   route();
 
-  // ---------- Gallery lightbox ----------
-  (function(){
+  // ---------- Gallery lightbox (preview with previous / next, swipe and arrow keys) ----------
+  // Wrapped in DOMContentLoaded: this script sits before the #lightboxBackdrop markup in index.html,
+  // so the lightbox elements only exist once the page has finished parsing.
+  document.addEventListener('DOMContentLoaded', () => {
     const backdrop = document.getElementById('lightboxBackdrop');
     if (!backdrop) return;
     const box = backdrop.querySelector('.lightbox-box');
     const labelEl = backdrop.querySelector('.lb-label');
+    const countEl = backdrop.querySelector('.lb-count');
+    const prevBtn = backdrop.querySelector('[data-lb-prev]');
+    const nextBtn = backdrop.querySelector('[data-lb-next]');
+    const toBn = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
     let lastFocus = null;
+    let group = [];
+    let index = 0;
+    let touchX = null;
 
-    function openLightbox(item){
+    // Photos shown in the same grid; pagination hides the others with display:none
+    function visibleGroup(item){
+      return Array.from(item.parentElement.children).filter(el =>
+        el.classList.contains('g-item') && el.style.display !== 'none');
+    }
+
+    function showAt(i){
+      index = (i + group.length) % group.length;
+      const item = group[index];
       const style = getComputedStyle(item);
       box.style.background = style.backgroundImage !== 'none' ? style.backgroundImage : style.backgroundColor;
+      box.style.backgroundSize = 'cover';
+      box.style.backgroundPosition = 'center';
       const labelSpan = item.querySelector('.g-label');
       labelEl.innerHTML = labelSpan ? labelSpan.innerHTML : '';
-      lastFocus = document.activeElement;
-      backdrop.classList.add('open');
-      backdrop.setAttribute('aria-hidden','false');
-      document.body.classList.add('modal-open');
+      const many = group.length > 1;
+      countEl.textContent = many ? toBn(index + 1) + ' / ' + toBn(group.length) : '';
+      prevBtn.hidden = !many;
+      nextBtn.hidden = !many;
       renderIcons();
     }
+
+    function openLightbox(item){
+      group = visibleGroup(item);
+      lastFocus = document.activeElement;
+      backdrop.classList.add('open');
+      backdrop.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('modal-open');
+      showAt(Math.max(0, group.indexOf(item)));
+    }
+
     function closeLightbox(){
       backdrop.classList.remove('open');
-      backdrop.setAttribute('aria-hidden','true');
+      backdrop.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('modal-open');
       if (lastFocus) lastFocus.focus();
     }
+
+    function step(d){ if (group.length > 1) showAt(index + d); }
+
     document.addEventListener('click', e => {
       const item = e.target.closest('.g-item');
       if (item) openLightbox(item);
     });
+    prevBtn.addEventListener('click', e => { e.stopPropagation(); step(-1); });
+    nextBtn.addEventListener('click', e => { e.stopPropagation(); step(1); });
+    backdrop.querySelector('[data-close-modal]').addEventListener('click', closeLightbox);
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeLightbox(); });
+
     document.addEventListener('keydown', e => {
+      if (backdrop.classList.contains('open')){
+        if (e.key === 'Escape') closeLightbox();
+        else if (e.key === 'ArrowLeft') step(-1);
+        else if (e.key === 'ArrowRight') step(1);
+        return;
+      }
       const item = document.activeElement && document.activeElement.closest && document.activeElement.closest('.g-item');
       if (item && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); openLightbox(item); }
     });
-    backdrop.querySelector('[data-close-modal]').addEventListener('click', closeLightbox);
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeLightbox(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && backdrop.classList.contains('open')) closeLightbox(); });
 
-    // Make gallery items keyboard-focusable
+    // Swipe left or right on touch screens
+    box.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
+    box.addEventListener('touchend', e => {
+      if (touchX === null) return;
+      const dx = e.changedTouches[0].clientX - touchX;
+      touchX = null;
+      if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1);
+    });
+
+    // Make static gallery items keyboard-focusable
     document.querySelectorAll('.g-item').forEach(it => { it.tabIndex = 0; it.style.cursor = 'pointer'; });
-  })();
+  });
