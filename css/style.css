@@ -1,4 +1,4 @@
- 
+
   :root{
     --header-h:     72px;      /* fallback; JS syncs this to the real header height */
     --paper:        #F6F0E2;
@@ -383,15 +383,10 @@
   .about-media{
     position:relative; border-radius:8px; overflow:hidden;
     aspect-ratio:4/5; background:var(--paper); border:1px dashed var(--brass);
-    display:flex; align-items:center; justify-content:center;
   }
   .about-media .img-placeholder{
-    position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:12px;
-    color:var(--ink-soft); font-family:'Hind Siliguri', 'Noto Sans Bengali', sans-serif; font-size:0.95rem;
+    position:absolute; inset:0; width:100%; height:100%;
   }
-  .about-media .img-placeholder i, .about-media .img-placeholder svg{ color:var(--brass); }
-  /* ছবি ফ্রেম ভরে বসবে (ক্রপ হয়ে, বিকৃত না হয়ে) */
-  .about-media .img-placeholder{ position:absolute; inset:0; width:100%; height:100%; }
   .about-media .img-placeholder img{
     width:100%; height:100%; display:block;
     object-fit:cover; object-position:center top;
